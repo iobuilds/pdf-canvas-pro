@@ -410,7 +410,7 @@ export function FunctionalPdfEditor() {
   }, [requireCanvas]);
 
   const addImageFromFile = useCallback(async (file: File) => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please choose an image file.");
@@ -418,12 +418,12 @@ export function FunctionalPdfEditor() {
     }
     const dataUrl = await readFileAsDataUrl(file);
     const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
-    img.set({ left: 100, top: 100, scaleX: 0.35, scaleY: 0.35, cornerStyle: "circle", borderColor: "#2563eb", cornerColor: "#2563eb" });
+    img.set({ left: 140, top: 140, scaleX: 0.35, scaleY: 0.35, cornerStyle: "circle", borderColor: "#2563eb", cornerColor: "#2563eb" });
     canvas.add(img);
     canvas.setActiveObject(img);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const deleteSelected = useCallback(() => {
     const canvas = fabricRef.current;
