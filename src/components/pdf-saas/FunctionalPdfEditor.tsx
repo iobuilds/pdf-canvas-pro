@@ -213,7 +213,6 @@ export function FunctionalPdfEditor() {
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
-  const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
   const [manualFontFamily, setManualFontFamily] = useState("");
@@ -1355,16 +1354,11 @@ export function FunctionalPdfEditor() {
                 ))}
               </div>
               <button
-                className={`${iconButton} w-full ${rectApplyAllPages ? activeButton : ""}`}
-                type="button"
-                onClick={() => setRectApplyAllPages((value) => !value)}
-              >
-                {rectApplyAllPages ? "All pages mode on" : "New rects: current page"}
-              </button>
-              <button
                 className={iconButton + " w-full"}
                 type="button"
-                disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1}
+                disabled={
+                  !selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1
+                }
                 onClick={applySelectedObjectToAllPages}
               >
                 Apply selected element to all pages
