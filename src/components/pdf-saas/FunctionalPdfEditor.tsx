@@ -159,6 +159,7 @@ export function FunctionalPdfEditor() {
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
     setIsRendering(true);
+    setIsEditorReady(false);
     try {
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
@@ -254,6 +255,7 @@ export function FunctionalPdfEditor() {
           (active as fabric.IText).enterEditing();
         }
       });
+      setIsEditorReady(true);
     } catch (error) {
       if (!(error instanceof Error && error.name === "RenderingCancelledException")) {
         toast.error(error instanceof Error ? error.message : "Could not render this page.");
@@ -346,11 +348,11 @@ export function FunctionalPdfEditor() {
   }, [validateAndLoadFile]);
 
   const addText = useCallback(() => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const text = new fabric.IText("Edit text", {
-      left: 80,
-      top: 80,
+      left: 140,
+      top: 140,
       fill: "#111827",
       fontSize: 28,
       fontFamily: "Inter, Arial",
@@ -364,14 +366,14 @@ export function FunctionalPdfEditor() {
     text.enterEditing();
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addRect = useCallback((highlight = false) => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const rect = new fabric.Rect({
-      left: 90,
-      top: 120,
+      left: 140,
+      top: 140,
       width: highlight ? 260 : 180,
       height: highlight ? 34 : 120,
       fill: highlight ? "rgba(250, 204, 21, 0.45)" : "rgba(37, 99, 235, 0.10)",
@@ -385,14 +387,14 @@ export function FunctionalPdfEditor() {
     canvas.setActiveObject(rect);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addCircle = useCallback(() => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const circle = new fabric.Circle({
-      left: 110,
-      top: 130,
+      left: 150,
+      top: 150,
       radius: 60,
       fill: "rgba(37, 99, 235, 0.10)",
       stroke: "#2563eb",
@@ -405,7 +407,7 @@ export function FunctionalPdfEditor() {
     canvas.setActiveObject(circle);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addImageFromFile = useCallback(async (file: File) => {
     const canvas = fabricRef.current;
