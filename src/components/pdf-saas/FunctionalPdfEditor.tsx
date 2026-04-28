@@ -93,6 +93,7 @@ export function FunctionalPdfEditor() {
   const [tool, setTool] = useState<Tool>("select");
   const [isLoading, setIsLoading] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -130,6 +131,15 @@ export function FunctionalPdfEditor() {
     historyIndexRef.current[pageNumber] = historyRef.current[pageNumber].length - 1;
     savePageState();
   }, [pageNumber, savePageState]);
+
+  const requireCanvas = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas || !isEditorReady) {
+      toast.error("PDF is still rendering. Try again in a moment.");
+      return null;
+    }
+    return canvas;
+  }, [isEditorReady]);
 
   const applyHistory = useCallback(async (direction: -1 | 1) => {
     const canvas = fabricRef.current;
