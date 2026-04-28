@@ -281,6 +281,34 @@ export function FunctionalPdfEditor() {
     [pageNumber, savePageState],
   );
 
+  const generatePageThumbnails = useCallback(async (doc: PdfDocumentProxy) => {
+    for (let pageIndex = 1; pageIndex <= doc.numPages; pageIndex += 1) {
+      try {
+        const page = await doc.getPage(pageIndex);
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(64 / viewport.width, 82 / viewport.height);
+        const thumbnailViewport = page.getViewport({ scale });
+        const thumbnailCanvas = document.createElement("canvas");
+        const context = thumbnailCanvas.getContext("2d");
+        if (!context) continue;
+        thumbnailCanvas.width = Math.max(1, Math.floor(thumbnailViewport.width));
+        thumbnailCanvas.height = Math.max(1, Math.floor(thumbnailViewport.height));
+        await page.render({ canvas: thumbnailCanvas, viewport: thumbnailViewport }).promise;
+        const nextState = {
+          ...pageStatesRef.current,
+          [pageIndex]: {
+            ...pageStatesRef.current[pageIndex],
+            thumbnail: thumbnailCanvas.toDataURL("image/png"),
+          },
+        };
+        pageStatesRef.current = nextState;
+        setPageStates(nextState);
+      } catch (error) {
+        console.warn(`Could not render thumbnail for page ${pageIndex}`, error);
+      }
+    }
+  }, []);
+
   const fitPageToWindow = useCallback(async () => {
     if (!pdfDoc || !workspaceRef.current) return;
     const page = await pdfDoc.getPage(pageNumber);
@@ -418,35 +446,39 @@ export function FunctionalPdfEditor() {
     }
   }, [pdfDoc, pageNumber, pushHistory, zoom]);
 
-  const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
-    setIsLoading(true);
-    try {
-      const copy = source.slice(0);
-      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
-      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-      pdfjsRef.current = pdfjs;
-      const doc = await pdfjs.getDocument({
-        data: copy.slice(0),
-        disableFontFace: true,
-        isOffscreenCanvasSupported: false,
-      }).promise;
-      setPdfDoc(doc);
-      setPdfBytes(source.slice(0));
-      setFileName(name);
-      setPageNumber(1);
-      setPageCount(doc.numPages);
-      pageStatesRef.current = {};
-      setPageStates({});
-      setMatches([]);
-      historyRef.current = {};
-      historyIndexRef.current = {};
-      toast.success("PDF loaded");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const loadPdf = useCallback(
+    async (source: ArrayBuffer, name: string) => {
+      setIsLoading(true);
+      try {
+        const copy = source.slice(0);
+        const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
+        pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        pdfjsRef.current = pdfjs;
+        const doc = await pdfjs.getDocument({
+          data: copy.slice(0),
+          disableFontFace: true,
+          isOffscreenCanvasSupported: false,
+        }).promise;
+        setPdfDoc(doc);
+        setPdfBytes(source.slice(0));
+        setFileName(name);
+        setPageNumber(1);
+        setPageCount(doc.numPages);
+        pageStatesRef.current = {};
+        setPageStates({});
+        setMatches([]);
+        historyRef.current = {};
+        historyIndexRef.current = {};
+        toast.success("PDF loaded");
+        void generatePageThumbnails(doc);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [generatePageThumbnails],
+  );
 
   useEffect(() => {
     renderPage();
@@ -1157,8 +1189,17 @@ export function FunctionalPdfEditor() {
                   setPageNumber(page);
                 }}
               >
-                <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-page text-xs font-bold shadow-soft">
-                  {page}
+                <div className="grid h-16 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-page text-xs font-bold shadow-soft">
+                  {pageStates[page]?.thumbnail ? (
+                    <img
+                      className="h-full w-full object-contain"
+                      src={pageStates[page]?.thumbnail}
+                      alt={`Page ${page} thumbnail`}
+                      loading="lazy"
+                    />
+                  ) : (
+                    page
+                  )}
                 </div>
                 <span className="text-sm font-medium">Page {page}</span>
               </button>
