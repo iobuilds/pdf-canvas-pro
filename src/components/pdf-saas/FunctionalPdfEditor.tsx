@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { saveAs } from "file-saver";
+import FileSaver from "file-saver";
 import { PDFDocument } from "pdf-lib";
 import * as fabric from "fabric";
 import {
@@ -456,7 +456,7 @@ export function FunctionalPdfEditor() {
         pdfPage.drawImage(image, { x: 0, y: 0, width, height });
       }
       const bytes = await pdfLibDoc.save();
-      saveAs(new Blob([bytes], { type: "application/pdf" }), fileName.replace(/\.pdf$/i, "-edited.pdf"));
+      FileSaver.saveAs(new Blob([bytes], { type: "application/pdf" }), fileName.replace(/\.pdf$/i, "-edited.pdf"));
       toast.success("Edited PDF exported");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not export PDF.");
