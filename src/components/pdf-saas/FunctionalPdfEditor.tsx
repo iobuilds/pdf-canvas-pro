@@ -829,6 +829,13 @@ export function FunctionalPdfEditor() {
               <Trash2 className="size-4" /> Delete selected
             </button>
             <button className={iconButton + " w-full"} onClick={clearObjects}>Clear page overlay</button>
+            {pngPreviewUrl && (
+              <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PNG preview</span>
+                <img className="max-h-40 w-full rounded-lg border border-border object-contain" src={pngPreviewUrl} alt="Downloaded selected area preview" />
+                <a className={iconButton + " w-full"} href={pngPreviewUrl} download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}>Download again</a>
+              </div>
+            )}
             <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted-foreground">
               Everything runs locally in your browser. Double-click text to edit overlay text, drag objects to move, use handles to resize/rotate, and export to flatten edits into a new PDF.
             </div>
