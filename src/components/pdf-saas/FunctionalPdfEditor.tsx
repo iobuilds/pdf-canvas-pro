@@ -98,6 +98,8 @@ export function FunctionalPdfEditor() {
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
+  const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
+  const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -371,12 +373,16 @@ export function FunctionalPdfEditor() {
   const addRect = useCallback((highlight = false) => {
     const canvas = requireCanvas();
     if (!canvas) return;
+    const width = highlight ? 260 : 180;
+    const height = highlight ? 34 : 120;
+    const left = Math.max(24, Math.round((canvas.getWidth() - width) / 2));
+    const top = Math.max(24, Math.round((canvas.getHeight() - height) / 2));
     const rect = new fabric.Rect({
-      left: 140,
-      top: 140,
-      width: highlight ? 260 : 180,
-      height: highlight ? 34 : 120,
-      fill: highlight ? "rgba(250, 204, 21, 0.45)" : "rgba(37, 99, 235, 0.10)",
+      left,
+      top,
+      width,
+      height,
+      fill: highlight ? "rgba(250, 204, 21, 0.45)" : rectFillColor,
       stroke: highlight ? "rgba(202, 138, 4, 0.8)" : "#2563eb",
       strokeWidth: highlight ? 0 : 2,
       cornerStyle: "circle",
@@ -386,8 +392,26 @@ export function FunctionalPdfEditor() {
     canvas.add(rect);
     canvas.setActiveObject(rect);
     canvas.requestRenderAll();
+    if (!highlight && rectApplyAllPages && pageCount > 1) {
+      const rectJson = rect.toObject();
+      const nextState = { ...pageStatesRef.current };
+      for (let page = 1; page <= pageCount; page += 1) {
+        if (page === pageNumber) continue;
+        const existingJson = nextState[page]?.json as { objects?: unknown[] } | null | undefined;
+        nextState[page] = {
+          ...nextState[page],
+          json: {
+            ...(existingJson ?? {}),
+            objects: [...(Array.isArray(existingJson?.objects) ? existingJson.objects : []), rectJson],
+          },
+        };
+      }
+      pageStatesRef.current = nextState;
+      setPageStates(nextState);
+      toast.success("Rectangle added to all pages");
+    }
     setTool("select");
-  }, [requireCanvas]);
+  }, [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas]);
 
   const addCircle = useCallback(() => {
     const canvas = requireCanvas();
@@ -521,6 +545,17 @@ export function FunctionalPdfEditor() {
     const active = canvas?.getActiveObject();
     if (!canvas || !active || active.type !== "i-text") return;
     (active as fabric.IText).set("fontSize", fontSize);
+    canvas.requestRenderAll();
+    pushHistory();
+  }, [pushHistory]);
+
+  const setSelectedPosition = useCallback((axis: "left" | "top", value: number) => {
+    const canvas = fabricRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || Number.isNaN(value)) return;
+    active.set(axis, Math.max(0, value));
+    active.setCoords();
+    setSelectedObject(active);
     canvas.requestRenderAll();
     pushHistory();
   }, [pushHistory]);
