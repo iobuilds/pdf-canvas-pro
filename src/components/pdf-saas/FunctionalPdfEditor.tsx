@@ -98,6 +98,8 @@ export function FunctionalPdfEditor() {
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
+  const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
+  const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -371,12 +373,16 @@ export function FunctionalPdfEditor() {
   const addRect = useCallback((highlight = false) => {
     const canvas = requireCanvas();
     if (!canvas) return;
+    const width = highlight ? 260 : 180;
+    const height = highlight ? 34 : 120;
+    const left = Math.max(24, Math.round((canvas.getWidth() - width) / 2));
+    const top = Math.max(24, Math.round((canvas.getHeight() - height) / 2));
     const rect = new fabric.Rect({
-      left: 140,
-      top: 140,
-      width: highlight ? 260 : 180,
-      height: highlight ? 34 : 120,
-      fill: highlight ? "rgba(250, 204, 21, 0.45)" : "rgba(37, 99, 235, 0.10)",
+      left,
+      top,
+      width,
+      height,
+      fill: highlight ? "rgba(250, 204, 21, 0.45)" : rectFillColor,
       stroke: highlight ? "rgba(202, 138, 4, 0.8)" : "#2563eb",
       strokeWidth: highlight ? 0 : 2,
       cornerStyle: "circle",
@@ -386,8 +392,26 @@ export function FunctionalPdfEditor() {
     canvas.add(rect);
     canvas.setActiveObject(rect);
     canvas.requestRenderAll();
+    if (!highlight && rectApplyAllPages && pageCount > 1) {
+      const rectJson = rect.toObject();
+      const nextState = { ...pageStatesRef.current };
+      for (let page = 1; page <= pageCount; page += 1) {
+        if (page === pageNumber) continue;
+        const existingJson = nextState[page]?.json as { objects?: unknown[] } | null | undefined;
+        nextState[page] = {
+          ...nextState[page],
+          json: {
+            ...(existingJson ?? {}),
+            objects: [...(Array.isArray(existingJson?.objects) ? existingJson.objects : []), rectJson],
+          },
+        };
+      }
+      pageStatesRef.current = nextState;
+      setPageStates(nextState);
+      toast.success("Rectangle added to all pages");
+    }
     setTool("select");
-  }, [requireCanvas]);
+  }, [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas]);
 
   const addCircle = useCallback(() => {
     const canvas = requireCanvas();
@@ -525,6 +549,17 @@ export function FunctionalPdfEditor() {
     pushHistory();
   }, [pushHistory]);
 
+  const setSelectedPosition = useCallback((axis: "left" | "top", value: number) => {
+    const canvas = fabricRef.current;
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || Number.isNaN(value)) return;
+    active.set(axis, Math.max(0, value));
+    active.setCoords();
+    setSelectedObject(active);
+    canvas.requestRenderAll();
+    pushHistory();
+  }, [pushHistory]);
+
   const selectedDescription = useMemo(() => {
     if (!selectedObject) return "No object selected";
     return `${selectedObject.type} · X ${Math.round(selectedObject.left ?? 0)} · Y ${Math.round(selectedObject.top ?? 0)}`;
@@ -632,6 +667,29 @@ export function FunctionalPdfEditor() {
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
           </div>
           <div className="space-y-5">
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rectangle fill</span>
+                <input className="h-9 w-12 rounded-lg border border-border bg-panel p-1" type="color" value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"} onChange={(event) => setRectFillColor(event.target.value)} />
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input className="size-4 accent-primary" type="checkbox" checked={rectApplyAllPages} onChange={(event) => setRectApplyAllPages(event.target.checked)} />
+                Apply new rectangles to all pages
+              </label>
+            </div>
+            <div className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Placement</span>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                  X
+                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.left ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("left", Number(event.target.value))} />
+                </label>
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                  Y
+                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.top ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("top", Number(event.target.value))} />
+                </label>
+              </div>
+            </div>
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Font size</span>
               <div className="grid grid-cols-4 gap-2">
