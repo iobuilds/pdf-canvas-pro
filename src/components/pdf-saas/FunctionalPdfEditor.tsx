@@ -644,7 +644,7 @@ export function FunctionalPdfEditor() {
       toast.error("Select a crop area first.");
       return;
     }
-    const rect = cropArea.getBoundingRect();
+    const rect = getCropExportRect(cropArea, canvas);
     const pixelRatioX = pdfCanvas.width / canvas.getWidth();
     const pixelRatioY = pdfCanvas.height / canvas.getHeight();
     const exportCanvas = document.createElement("canvas");
