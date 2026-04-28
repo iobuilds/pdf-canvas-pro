@@ -1320,6 +1320,28 @@ export function FunctionalPdfEditor() {
                     </option>
                   ))}
                 </select>
+                <div className="flex gap-2">
+                  <input
+                    className="h-9 min-w-0 flex-1 rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!selectedText}
+                    placeholder="Type installed font name"
+                    value={manualFontFamily}
+                    onChange={(event) => setManualFontFamily(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && manualFontFamily.trim()) {
+                        setSelectedFontFamily(manualFontFamily.trim());
+                      }
+                    }}
+                  />
+                  <button
+                    className={iconButton + " h-9 px-3"}
+                    disabled={!selectedText || !manualFontFamily.trim()}
+                    type="button"
+                    onClick={() => setSelectedFontFamily(manualFontFamily.trim())}
+                  >
+                    Use
+                  </button>
+                </div>
               </label>
               <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
