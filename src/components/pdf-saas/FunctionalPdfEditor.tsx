@@ -191,6 +191,14 @@ export function FunctionalPdfEditor() {
       nextFabric.freeDrawingBrush.color = "#2563eb";
       nextFabric.freeDrawingBrush.width = 3;
       nextFabric.isDrawingMode = tool === "pen" || tool === "eraser";
+      const fabricWrapper = nextFabric.wrapperEl;
+      fabricWrapper.style.position = "absolute";
+      fabricWrapper.style.inset = "0";
+      fabricWrapper.style.width = `${Math.floor(viewport.width)}px`;
+      fabricWrapper.style.height = `${Math.floor(viewport.height)}px`;
+      fabricWrapper.style.pointerEvents = "auto";
+      nextFabric.lowerCanvasEl.style.position = "absolute";
+      nextFabric.upperCanvasEl.style.position = "absolute";
       if (tool === "eraser") {
         nextFabric.freeDrawingBrush.color = "#ffffff";
         nextFabric.freeDrawingBrush.width = 18;
