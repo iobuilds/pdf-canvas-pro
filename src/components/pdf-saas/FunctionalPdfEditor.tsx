@@ -602,7 +602,7 @@ export function FunctionalPdfEditor() {
           <div className="mx-auto w-fit animate-editor-enter rounded-sm shadow-page">
             <div className="relative bg-page">
               <canvas ref={pdfCanvasRef} className="block" />
-              <canvas ref={overlayCanvasRef} className="absolute inset-0 block" />
+              <div ref={overlayHostRef} className="absolute inset-0" />
               {(isLoading || isRendering) && (
                 <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
