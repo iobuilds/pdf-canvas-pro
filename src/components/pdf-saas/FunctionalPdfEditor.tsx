@@ -325,15 +325,6 @@ export function FunctionalPdfEditor() {
   }, []);
 
   useEffect(() => {
-    urlToArrayBuffer(SAMPLE_PDF_URL)
-      .then((buffer) => loadPdf(buffer, "2025_PHY_02.pdf"))
-      .catch((error) => {
-        setIsLoading(false);
-        toast.error(error instanceof Error ? error.message : "Upload a PDF to begin.");
-      });
-  }, [loadPdf]);
-
-  useEffect(() => {
     renderPage();
     return () => {
       if (renderTaskRef.current) {
