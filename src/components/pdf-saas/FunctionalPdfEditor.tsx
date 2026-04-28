@@ -51,15 +51,58 @@ const PDF_RENDER_TIMEOUT_MS = 7000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const SYSTEM_FONTS = [
   "Arial",
+  "Arial Black",
   "Helvetica",
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Montserrat",
+  "Poppins",
+  "Nunito",
+  "Segoe UI",
+  "Calibri",
+  "Cambria",
+  "Candara",
+  "Consolas",
+  "Constantia",
+  "Corbel",
   "Times New Roman",
   "Georgia",
+  "Garamond",
+  "Palatino Linotype",
   "Verdana",
   "Tahoma",
   "Trebuchet MS",
+  "Impact",
+  "Comic Sans MS",
   "Courier New",
+  "Lucida Console",
+  "Monaco",
+  "Menlo",
+  "Gill Sans",
+  "Optima",
+  "Avenir",
+  "Futura",
+  "Baskerville",
+  "Didot",
+  "Hoefler Text",
+  "American Typewriter",
+  "SF Pro Display",
+  "SF Pro Text",
 ];
 const CROP_AREA_NAME = "export-crop-area";
+
+type LocalFontEntry = {
+  family: string;
+  fullName?: string;
+  postscriptName?: string;
+  style?: string;
+};
+
+type FontAccessWindow = Window & {
+  queryLocalFonts?: () => Promise<LocalFontEntry[]>;
+};
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
@@ -151,6 +194,7 @@ export function FunctionalPdfEditor() {
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
   const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
+  const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -166,6 +210,22 @@ export function FunctionalPdfEditor() {
     },
     [pngPreviewUrl],
   );
+
+  const loadSystemFonts = useCallback(async () => {
+    const queryLocalFonts = (window as FontAccessWindow).queryLocalFonts;
+    if (!queryLocalFonts) {
+      toast.info("Showing common system fonts supported by this browser.");
+      return;
+    }
+    try {
+      const fonts = await queryLocalFonts();
+      const fontFamilies = fonts.map((font) => font.family).filter(Boolean);
+      setAvailableFonts(Array.from(new Set([...SYSTEM_FONTS, ...fontFamilies])).sort());
+      toast.success("System fonts loaded");
+    } catch {
+      toast.info("Font permission was not allowed. Showing common system fonts.");
+    }
+  }, []);
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
@@ -622,7 +682,19 @@ export function FunctionalPdfEditor() {
 
       const canvas = fabricRef.current;
       const activeObjects = canvas?.getActiveObjects() ?? [];
-      if (!canvas || !activeObjects.length) return;
+      if (!canvas) return;
+
+      if (!activeObjects.length) {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          event.stopPropagation();
+          savePageState();
+          setPageNumber((page) =>
+            event.key === "ArrowLeft" ? Math.max(1, page - 1) : Math.min(pageCount || 1, page + 1),
+          );
+        }
+        return;
+      }
 
       const activeText = canvas.getActiveObject();
       if (activeText?.type === "i-text" && (activeText as fabric.IText).isEditing) return;
@@ -643,6 +715,7 @@ export function FunctionalPdfEditor() {
       if (!direction) return;
 
       event.preventDefault();
+      event.stopPropagation();
       const step = event.shiftKey ? 10 : 1;
       activeObjects.forEach((object) => {
         object.set({
@@ -659,7 +732,7 @@ export function FunctionalPdfEditor() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelected, pushHistory]);
+  }, [deleteSelected, pageCount, pushHistory, savePageState]);
 
   const clearObjects = useCallback(() => {
     const canvas = fabricRef.current;
@@ -1216,15 +1289,28 @@ export function FunctionalPdfEditor() {
                 Text options
               </span>
               <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-                System font
+                <span className="flex items-center justify-between gap-2">
+                  System font
+                  <button
+                    className="text-xs font-semibold text-primary"
+                    type="button"
+                    onClick={loadSystemFonts}
+                  >
+                    Load all
+                  </button>
+                </span>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   disabled={!selectedText}
-                  value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
+                  value={
+                    selectedText?.fontFamily
+                      ? String(selectedText.fontFamily).split(",")[0]
+                      : "Arial"
+                  }
                   onChange={(event) => setSelectedFontFamily(event.target.value)}
                 >
-                  {SYSTEM_FONTS.map((font) => (
-                    <option key={font} value={font}>
+                  {availableFonts.map((font) => (
+                    <option key={font} value={font} style={{ fontFamily: font }}>
                       {font}
                     </option>
                   ))}
