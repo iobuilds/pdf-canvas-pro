@@ -156,6 +156,23 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
   };
 }
 
+function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
+  const toWidth = canvas.getWidth();
+  const toHeight = canvas.getHeight();
+  if (!fromWidth || !fromHeight || (fromWidth === toWidth && fromHeight === toHeight)) return;
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
+  canvas.getObjects().forEach((object) => {
+    object.set({
+      left: (object.left ?? 0) * scaleX,
+      top: (object.top ?? 0) * scaleY,
+      scaleX: (object.scaleX ?? 1) * scaleX,
+      scaleY: (object.scaleY ?? 1) * scaleY,
+    });
+    object.setCoords();
+  });
+}
+
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
