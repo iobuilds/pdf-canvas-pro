@@ -72,6 +72,7 @@ export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const historyRef = useRef<Record<number, string[]>>({});
@@ -79,6 +80,7 @@ export function FunctionalPdfEditor() {
   const renderTaskRef = useRef<RenderTask | null>(null);
   const pdfjsRef = useRef<PdfJsModule | null>(null);
   const skipHistoryRef = useRef(false);
+  const toolRef = useRef<Tool>("select");
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
@@ -91,10 +93,15 @@ export function FunctionalPdfEditor() {
   const [tool, setTool] = useState<Tool>("select");
   const [isLoading, setIsLoading] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
+
+  useEffect(() => {
+    toolRef.current = tool;
+  }, [tool]);
 
   useEffect(() => {
     pageStatesRef.current = pageStates;
@@ -125,6 +132,15 @@ export function FunctionalPdfEditor() {
     savePageState();
   }, [pageNumber, savePageState]);
 
+  const requireCanvas = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas || !isEditorReady) {
+      toast.error("PDF is still rendering. Try again in a moment.");
+      return null;
+    }
+    return canvas;
+  }, [isEditorReady]);
+
   const applyHistory = useCallback(async (direction: -1 | 1) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -141,8 +157,9 @@ export function FunctionalPdfEditor() {
   }, [pageNumber, savePageState]);
 
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !pdfCanvasRef.current || !overlayCanvasRef.current) return;
+    if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
     setIsRendering(true);
+    setIsEditorReady(false);
     try {
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
@@ -174,7 +191,13 @@ export function FunctionalPdfEditor() {
       const existing = fabricRef.current;
       if (existing) existing.dispose();
 
-      const overlayCanvas = overlayCanvasRef.current;
+      const overlayHost = overlayHostRef.current;
+      overlayHost.replaceChildren();
+      overlayHost.style.width = `${Math.floor(viewport.width)}px`;
+      overlayHost.style.height = `${Math.floor(viewport.height)}px`;
+      const overlayCanvas = document.createElement("canvas");
+      overlayHost.appendChild(overlayCanvas);
+      overlayCanvasRef.current = overlayCanvas;
       overlayCanvas.width = Math.floor(viewport.width);
       overlayCanvas.height = Math.floor(viewport.height);
       overlayCanvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -190,8 +213,17 @@ export function FunctionalPdfEditor() {
       nextFabric.freeDrawingBrush = new fabric.PencilBrush(nextFabric);
       nextFabric.freeDrawingBrush.color = "#2563eb";
       nextFabric.freeDrawingBrush.width = 3;
-      nextFabric.isDrawingMode = tool === "pen" || tool === "eraser";
-      if (tool === "eraser") {
+      const currentTool = toolRef.current;
+      nextFabric.isDrawingMode = currentTool === "pen" || currentTool === "eraser";
+      const fabricWrapper = nextFabric.wrapperEl;
+      fabricWrapper.style.position = "absolute";
+      fabricWrapper.style.inset = "0";
+      fabricWrapper.style.width = `${Math.floor(viewport.width)}px`;
+      fabricWrapper.style.height = `${Math.floor(viewport.height)}px`;
+      fabricWrapper.style.pointerEvents = "auto";
+      nextFabric.lowerCanvasEl.style.position = "absolute";
+      nextFabric.upperCanvasEl.style.position = "absolute";
+      if (currentTool === "eraser") {
         nextFabric.freeDrawingBrush.color = "#ffffff";
         nextFabric.freeDrawingBrush.width = 18;
       }
@@ -223,6 +255,7 @@ export function FunctionalPdfEditor() {
           (active as fabric.IText).enterEditing();
         }
       });
+      setIsEditorReady(true);
     } catch (error) {
       if (!(error instanceof Error && error.name === "RenderingCancelledException")) {
         toast.error(error instanceof Error ? error.message : "Could not render this page.");
@@ -230,7 +263,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfDoc, pageNumber, pushHistory, tool, zoom]);
+  }, [pdfDoc, pageNumber, pushHistory, zoom]);
 
   const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
     setIsLoading(true);
@@ -315,11 +348,11 @@ export function FunctionalPdfEditor() {
   }, [validateAndLoadFile]);
 
   const addText = useCallback(() => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const text = new fabric.IText("Edit text", {
-      left: 80,
-      top: 80,
+      left: 140,
+      top: 140,
       fill: "#111827",
       fontSize: 28,
       fontFamily: "Inter, Arial",
@@ -333,14 +366,14 @@ export function FunctionalPdfEditor() {
     text.enterEditing();
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addRect = useCallback((highlight = false) => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const rect = new fabric.Rect({
-      left: 90,
-      top: 120,
+      left: 140,
+      top: 140,
       width: highlight ? 260 : 180,
       height: highlight ? 34 : 120,
       fill: highlight ? "rgba(250, 204, 21, 0.45)" : "rgba(37, 99, 235, 0.10)",
@@ -354,14 +387,14 @@ export function FunctionalPdfEditor() {
     canvas.setActiveObject(rect);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addCircle = useCallback(() => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     const circle = new fabric.Circle({
-      left: 110,
-      top: 130,
+      left: 150,
+      top: 150,
       radius: 60,
       fill: "rgba(37, 99, 235, 0.10)",
       stroke: "#2563eb",
@@ -374,10 +407,10 @@ export function FunctionalPdfEditor() {
     canvas.setActiveObject(circle);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const addImageFromFile = useCallback(async (file: File) => {
-    const canvas = fabricRef.current;
+    const canvas = requireCanvas();
     if (!canvas) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please choose an image file.");
@@ -385,12 +418,12 @@ export function FunctionalPdfEditor() {
     }
     const dataUrl = await readFileAsDataUrl(file);
     const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
-    img.set({ left: 100, top: 100, scaleX: 0.35, scaleY: 0.35, cornerStyle: "circle", borderColor: "#2563eb", cornerColor: "#2563eb" });
+    img.set({ left: 140, top: 140, scaleX: 0.35, scaleY: 0.35, cornerStyle: "circle", borderColor: "#2563eb", cornerColor: "#2563eb" });
     canvas.add(img);
     canvas.setActiveObject(img);
     canvas.requestRenderAll();
     setTool("select");
-  }, []);
+  }, [requireCanvas]);
 
   const deleteSelected = useCallback(() => {
     const canvas = fabricRef.current;
@@ -525,13 +558,13 @@ export function FunctionalPdfEditor() {
           <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
             <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
             <button className={iconButton} onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Upload</button>
-            <button className={iconButton} onClick={addText}><Type className="size-4" />Text</button>
-            <button className={iconButton} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
-            <button className={iconButton} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
-            <button className={iconButton} onClick={addCircle}><Circle className="size-4" />Circle</button>
-            <button className={iconButton} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
-            <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
-            <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
+            <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
+            <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -581,7 +614,7 @@ export function FunctionalPdfEditor() {
           <div className="mx-auto w-fit animate-editor-enter rounded-sm shadow-page">
             <div className="relative bg-page">
               <canvas ref={pdfCanvasRef} className="block" />
-              <canvas ref={overlayCanvasRef} className="absolute inset-0 block" />
+              <div ref={overlayHostRef} className="absolute inset-0" />
               {(isLoading || isRendering) && (
                 <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
@@ -601,9 +634,9 @@ export function FunctionalPdfEditor() {
           <div className="space-y-5">
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Font size</span>
-              <select className="h-10 w-full rounded-lg border border-input bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring" disabled={!selectedObject || selectedObject.type !== "i-text"} onChange={(e) => setSelectedFontSize(Number(e.target.value))} defaultValue="28">
-                {[12, 16, 20, 24, 28, 36, 48, 64].map((size) => <option key={size} value={size}>{size}px</option>)}
-              </select>
+              <div className="grid grid-cols-4 gap-2">
+                {[12, 20, 28, 48].map((size) => <button key={size} className={iconButton + " h-9 px-2"} disabled={!selectedObject || selectedObject.type !== "i-text"} onClick={() => setSelectedFontSize(size)}>{size}</button>)}
+              </div>
             </label>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color</span>
