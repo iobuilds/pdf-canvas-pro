@@ -3,6 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import * as fabric from "fabric";
 import {
   Circle,
+  Crop,
   Download,
   Eraser,
   FileText,
@@ -46,6 +47,7 @@ const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
+const CROP_AREA_NAME = "export-crop-area";
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
