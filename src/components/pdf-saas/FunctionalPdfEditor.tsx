@@ -166,7 +166,7 @@ export function FunctionalPdfEditor() {
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       context.clearRect(0, 0, viewport.width, viewport.height);
 
-      const task = page.render({ canvasContext: context, viewport });
+      const task = page.render({ canvas: pdfCanvas, canvasContext: context, viewport });
       renderTaskRef.current = task;
       await task.promise;
       renderTaskRef.current = null;
@@ -454,7 +454,8 @@ export function FunctionalPdfEditor() {
         pdfPage.drawImage(image, { x: 0, y: 0, width, height });
       }
       const bytes = await pdfLibDoc.save();
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const exportBytes = new Uint8Array(bytes);
+      const blob = new Blob([exportBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
