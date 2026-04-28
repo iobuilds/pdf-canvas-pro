@@ -93,7 +93,12 @@ const SYSTEM_FONTS = [
 ];
 const CROP_AREA_NAME = "export-crop-area";
 
-type LocalFontEntry = { family: string; fullName?: string; postscriptName?: string; style?: string };
+type LocalFontEntry = {
+  family: string;
+  fullName?: string;
+  postscriptName?: string;
+  style?: string;
+};
 
 type FontAccessWindow = Window & {
   queryLocalFonts?: () => Promise<LocalFontEntry[]>;
@@ -685,9 +690,7 @@ export function FunctionalPdfEditor() {
           event.stopPropagation();
           savePageState();
           setPageNumber((page) =>
-            event.key === "ArrowLeft"
-              ? Math.max(1, page - 1)
-              : Math.min(pageCount || 1, page + 1),
+            event.key === "ArrowLeft" ? Math.max(1, page - 1) : Math.min(pageCount || 1, page + 1),
           );
         }
         return;
@@ -1288,14 +1291,22 @@ export function FunctionalPdfEditor() {
               <label className="block space-y-1 text-xs font-medium text-muted-foreground">
                 <span className="flex items-center justify-between gap-2">
                   System font
-                  <button className="text-xs font-semibold text-primary" type="button" onClick={loadSystemFonts}>
+                  <button
+                    className="text-xs font-semibold text-primary"
+                    type="button"
+                    onClick={loadSystemFonts}
+                  >
                     Load all
                   </button>
                 </span>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   disabled={!selectedText}
-                  value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
+                  value={
+                    selectedText?.fontFamily
+                      ? String(selectedText.fontFamily).split(",")[0]
+                      : "Arial"
+                  }
                   onChange={(event) => setSelectedFontFamily(event.target.value)}
                 >
                   {availableFonts.map((font) => (
