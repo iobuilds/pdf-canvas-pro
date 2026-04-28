@@ -99,6 +99,10 @@ export function FunctionalPdfEditor() {
   const [matches, setMatches] = useState<number[]>([]);
 
   useEffect(() => {
+    toolRef.current = tool;
+  }, [tool]);
+
+  useEffect(() => {
     pageStatesRef.current = pageStates;
   }, [pageStates]);
 
