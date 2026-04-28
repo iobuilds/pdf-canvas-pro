@@ -82,6 +82,7 @@ const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
 const uploadInputClass = "absolute inset-0 cursor-pointer opacity-0";
+const primaryActionButton = `${iconButton} bg-primary text-primary-foreground shadow-blue hover:bg-primary/90`;
 
 export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -715,7 +716,7 @@ export function FunctionalPdfEditor() {
             <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Crop</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Select area</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
             <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
             <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
@@ -724,8 +725,8 @@ export function FunctionalPdfEditor() {
           <div className="flex items-center gap-2">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo"><Undo2 className="size-4" /></button>
             <button className={iconButton} onClick={() => applyHistory(1)} aria-label="Redo"><Redo2 className="size-4" /></button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Crop className="size-4" />PNG</button>
-            <button className={`${iconButton} ${activeButton}`} onClick={exportPdf}><Download className="size-4" />Export</button>
+            <button className={primaryActionButton} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Crop className="size-4" />Download area PNG</button>
+            <button className={primaryActionButton} onClick={exportPdf}><Download className="size-4" />Export PDF</button>
           </div>
         </div>
       </header>
@@ -787,7 +788,12 @@ export function FunctionalPdfEditor() {
             <p className="text-sm font-semibold">Properties</p>
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
           </div>
-          <div className="space-y-5">
+            <div className="space-y-5">
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Crop export</span>
+              <button className={iconButton + " w-full"} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Select area</button>
+              <button className={primaryActionButton + " w-full"} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Download className="size-4" />Download selected area</button>
+            </div>
             <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rectangle fill</span>
