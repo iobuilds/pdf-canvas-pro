@@ -51,15 +51,53 @@ const PDF_RENDER_TIMEOUT_MS = 7000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const SYSTEM_FONTS = [
   "Arial",
+  "Arial Black",
   "Helvetica",
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Montserrat",
+  "Poppins",
+  "Nunito",
+  "Segoe UI",
+  "Calibri",
+  "Cambria",
+  "Candara",
+  "Consolas",
+  "Constantia",
+  "Corbel",
   "Times New Roman",
   "Georgia",
+  "Garamond",
+  "Palatino Linotype",
   "Verdana",
   "Tahoma",
   "Trebuchet MS",
+  "Impact",
+  "Comic Sans MS",
   "Courier New",
+  "Lucida Console",
+  "Monaco",
+  "Menlo",
+  "Gill Sans",
+  "Optima",
+  "Avenir",
+  "Futura",
+  "Baskerville",
+  "Didot",
+  "Hoefler Text",
+  "American Typewriter",
+  "SF Pro Display",
+  "SF Pro Text",
 ];
 const CROP_AREA_NAME = "export-crop-area";
+
+type LocalFontEntry = { family: string; fullName?: string; postscriptName?: string; style?: string };
+
+type FontAccessWindow = Window & {
+  queryLocalFonts?: () => Promise<LocalFontEntry[]>;
+};
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
