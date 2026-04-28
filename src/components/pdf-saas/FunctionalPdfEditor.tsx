@@ -481,6 +481,32 @@ export function FunctionalPdfEditor() {
     setTool("select");
   }, [requireCanvas]);
 
+  const addCropArea = useCallback(() => {
+    const canvas = requireCanvas();
+    if (!canvas) return;
+    canvas.getObjects().filter((object) => object.name === CROP_AREA_NAME).forEach((object) => canvas.remove(object));
+    const width = Math.min(360, Math.max(180, canvas.getWidth() - 80));
+    const height = Math.min(240, Math.max(120, canvas.getHeight() - 80));
+    const cropArea = new fabric.Rect({
+      name: CROP_AREA_NAME,
+      left: Math.max(24, Math.round((canvas.getWidth() - width) / 2)),
+      top: Math.max(24, Math.round((canvas.getHeight() - height) / 2)),
+      width,
+      height,
+      fill: "rgba(37, 99, 235, 0.08)",
+      stroke: "#2563eb",
+      strokeDashArray: [8, 6],
+      strokeWidth: 2,
+      cornerStyle: "circle",
+      borderColor: "#2563eb",
+      cornerColor: "#2563eb",
+    });
+    canvas.add(cropArea);
+    canvas.setActiveObject(cropArea);
+    canvas.requestRenderAll();
+    setTool("select");
+  }, [requireCanvas]);
+
   const addImageFromFile = useCallback(async (file: File) => {
     const canvas = requireCanvas();
     if (!canvas) return;
