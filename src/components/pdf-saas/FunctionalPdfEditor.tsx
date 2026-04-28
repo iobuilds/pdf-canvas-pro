@@ -147,7 +147,7 @@ export function FunctionalPdfEditor() {
   }, [pageNumber, savePageState]);
 
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !pdfCanvasRef.current || !overlayCanvasRef.current) return;
+    if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
     setIsRendering(true);
     try {
       if (renderTaskRef.current) {
@@ -180,7 +180,13 @@ export function FunctionalPdfEditor() {
       const existing = fabricRef.current;
       if (existing) existing.dispose();
 
-      const overlayCanvas = overlayCanvasRef.current;
+      const overlayHost = overlayHostRef.current;
+      overlayHost.replaceChildren();
+      overlayHost.style.width = `${Math.floor(viewport.width)}px`;
+      overlayHost.style.height = `${Math.floor(viewport.height)}px`;
+      const overlayCanvas = document.createElement("canvas");
+      overlayHost.appendChild(overlayCanvas);
+      overlayCanvasRef.current = overlayCanvas;
       overlayCanvas.width = Math.floor(viewport.width);
       overlayCanvas.height = Math.floor(viewport.height);
       overlayCanvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -196,7 +202,8 @@ export function FunctionalPdfEditor() {
       nextFabric.freeDrawingBrush = new fabric.PencilBrush(nextFabric);
       nextFabric.freeDrawingBrush.color = "#2563eb";
       nextFabric.freeDrawingBrush.width = 3;
-      nextFabric.isDrawingMode = tool === "pen" || tool === "eraser";
+      const currentTool = toolRef.current;
+      nextFabric.isDrawingMode = currentTool === "pen" || currentTool === "eraser";
       const fabricWrapper = nextFabric.wrapperEl;
       fabricWrapper.style.position = "absolute";
       fabricWrapper.style.inset = "0";
@@ -205,7 +212,7 @@ export function FunctionalPdfEditor() {
       fabricWrapper.style.pointerEvents = "auto";
       nextFabric.lowerCanvasEl.style.position = "absolute";
       nextFabric.upperCanvasEl.style.position = "absolute";
-      if (tool === "eraser") {
+      if (currentTool === "eraser") {
         nextFabric.freeDrawingBrush.color = "#ffffff";
         nextFabric.freeDrawingBrush.width = 18;
       }
@@ -244,7 +251,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfDoc, pageNumber, pushHistory, tool, zoom]);
+  }, [pdfDoc, pageNumber, pushHistory, zoom]);
 
   const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
     setIsLoading(true);
