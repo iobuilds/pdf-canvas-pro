@@ -43,7 +43,6 @@ type FabricJson = {
   [key: string]: unknown;
 };
 
-const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const PDF_RENDER_TIMEOUT_MS = 7000;
@@ -71,12 +70,6 @@ function readFileAsDataUrl(file: File) {
 function asFabricJson(json: unknown): FabricJson {
   if (json && typeof json === "object") return json as FabricJson;
   return { version: "6.0.0", objects: [] };
-}
-
-async function urlToArrayBuffer(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Could not load the sample PDF.");
-  return response.arrayBuffer();
 }
 
 function renderWithTimeout(task: RenderTask) {
@@ -111,14 +104,14 @@ export function FunctionalPdfEditor() {
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
-  const [fileName, setFileName] = useState("2025_PHY_02.pdf");
+  const [fileName, setFileName] = useState("Upload a PDF");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [pageStates, setPageStates] = useState<Record<number, PageState>>({});
   const pageStatesRef = useRef<Record<number, PageState>>({});
   const [tool, setTool] = useState<Tool>("select");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -330,15 +323,6 @@ export function FunctionalPdfEditor() {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    urlToArrayBuffer(SAMPLE_PDF_URL)
-      .then((buffer) => loadPdf(buffer, "2025_PHY_02.pdf"))
-      .catch((error) => {
-        setIsLoading(false);
-        toast.error(error instanceof Error ? error.message : "Upload a PDF to begin.");
-      });
-  }, [loadPdf]);
 
   useEffect(() => {
     renderPage();
