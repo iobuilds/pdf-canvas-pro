@@ -220,7 +220,11 @@ export function FunctionalPdfEditor() {
 
       const task = page.render({ canvas: pdfCanvas, viewport: renderViewport });
       renderTaskRef.current = task;
-      await task.promise;
+      const renderResult = await renderWithTimeout(task);
+      if (renderResult === "timeout") {
+        task.cancel();
+        toast.warning("PDF preview is taking too long, but editing tools are ready.");
+      }
       renderTaskRef.current = null;
 
       const existing = fabricRef.current;
