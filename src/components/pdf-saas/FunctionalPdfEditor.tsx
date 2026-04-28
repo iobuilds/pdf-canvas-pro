@@ -164,6 +164,7 @@ export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
   const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
@@ -279,6 +280,28 @@ export function FunctionalPdfEditor() {
     },
     [pageNumber, savePageState],
   );
+
+  const fitPageToWindow = useCallback(async () => {
+    if (!pdfDoc || !workspaceRef.current) return;
+    const page = await pdfDoc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const baseFitScale = Math.min(CANVAS_MAX_WIDTH / viewport.width, 1.4);
+    const availableWidth = Math.max(280, workspaceRef.current.clientWidth - 48);
+    const availableHeight = Math.max(280, workspaceRef.current.clientHeight - 112);
+    const nextZoom = Math.min(
+      2.5,
+      Math.max(
+        0.35,
+        Number(
+          Math.min(
+            availableWidth / (viewport.width * baseFitScale),
+            availableHeight / (viewport.height * baseFitScale),
+          ).toFixed(2),
+        ),
+      ),
+    );
+    setZoom(nextZoom);
+  }, [pageNumber, pdfDoc]);
 
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
@@ -1143,7 +1166,7 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div className="relative min-w-0 overflow-auto bg-editor p-3 md:p-6">
+        <div ref={workspaceRef} className="relative min-w-0 overflow-auto bg-editor p-3 md:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1172,7 +1195,11 @@ export function FunctionalPdfEditor() {
               >
                 <ZoomIn className="size-4" />
               </button>
-              <button className={iconButton} onClick={() => setZoom(1)}>
+              <button
+                className={iconButton}
+                disabled={!pdfDoc}
+                onClick={() => void fitPageToWindow()}
+              >
                 <RotateCw className="size-4" />
                 Fit
               </button>
