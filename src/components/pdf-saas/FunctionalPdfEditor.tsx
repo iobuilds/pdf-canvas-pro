@@ -79,6 +79,7 @@ async function urlToArrayBuffer(url: string) {
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
+const fileInputClass = "fixed left-0 top-0 size-px opacity-0 pointer-events-none";
 
 export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -354,6 +355,12 @@ export function FunctionalPdfEditor() {
     await loadPdf(buffer, file.name);
   }, [loadPdf]);
 
+  const handlePdfInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void validateAndLoadFile(file);
+  }, [validateAndLoadFile]);
+
   const handleDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setIsDraggingOver(false);
@@ -609,8 +616,8 @@ export function FunctionalPdfEditor() {
       onDragLeave={() => setIsDraggingOver(false)}
       onDrop={handleDrop}
     >
-      <input ref={fileInputRef} className="hidden" type="file" accept="application/pdf,.pdf" onChange={(event) => event.target.files?.[0] && validateAndLoadFile(event.target.files[0])} />
-      <input ref={imageInputRef} className="hidden" type="file" accept="image/*" onChange={(event) => event.target.files?.[0] && addImageFromFile(event.target.files[0])} />
+      <input id="pdf-upload-input" ref={fileInputRef} className={fileInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} />
+      <input id="image-upload-input" ref={imageInputRef} className={fileInputClass} type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} />
 
       <header className="sticky top-0 z-30 border-b border-border bg-panel/95 shadow-soft backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-3 px-3 md:px-5">
