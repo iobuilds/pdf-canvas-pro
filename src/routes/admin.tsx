@@ -1,0 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/admin")({ head: () => ({ meta: [{ title: "Admin — DocuForge" }, { name: "description", content: "Admin controls for users, usage, storage, and subscriptions." }] }), component: Admin });
+function Admin(){return <main className="min-h-screen bg-workspace px-4 py-12 text-foreground md:px-8"><div className="mx-auto max-w-7xl"><h1 className="text-5xl font-bold tracking-tight">Admin panel</h1><div className="mt-8 grid gap-4 md:grid-cols-4">{["Users","Usage analytics","Storage","Billing"].map(item=><section key={item} className="rounded-2xl border border-border bg-panel p-6 shadow-soft"><h2 className="text-xl font-semibold">{item}</h2><p className="mt-3 text-sm text-muted-foreground">Operational controls and audit visibility.</p></section>)}</div></div></main>}
