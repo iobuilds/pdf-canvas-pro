@@ -72,6 +72,7 @@ export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const historyRef = useRef<Record<number, string[]>>({});
@@ -79,6 +80,7 @@ export function FunctionalPdfEditor() {
   const renderTaskRef = useRef<RenderTask | null>(null);
   const pdfjsRef = useRef<PdfJsModule | null>(null);
   const skipHistoryRef = useRef(false);
+  const toolRef = useRef<Tool>("select");
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
