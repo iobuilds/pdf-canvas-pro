@@ -89,6 +89,7 @@ export function FunctionalPdfEditor() {
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [pageStates, setPageStates] = useState<Record<number, PageState>>({});
+  const pageStatesRef = useRef<Record<number, PageState>>({});
   const [tool, setTool] = useState<Tool>("select");
   const [isLoading, setIsLoading] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
@@ -97,16 +98,20 @@ export function FunctionalPdfEditor() {
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
 
-  const currentPageState = pageStates[pageNumber];
+  useEffect(() => {
+    pageStatesRef.current = pageStates;
+  }, [pageStates]);
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const json = canvas.toJSON();
-    setPageStates((prev) => ({
-      ...prev,
-      [pageNumber]: { ...prev[pageNumber], json },
-    }));
+    const nextState = {
+      ...pageStatesRef.current,
+      [pageNumber]: { ...pageStatesRef.current[pageNumber], json },
+    };
+    pageStatesRef.current = nextState;
+    setPageStates(nextState);
   }, [pageNumber]);
 
   const pushHistory = useCallback(() => {
@@ -195,7 +200,7 @@ export function FunctionalPdfEditor() {
 
       fabricRef.current = nextFabric;
 
-      const savedJson = pageStates[pageNumber]?.json;
+      const savedJson = pageStatesRef.current[pageNumber]?.json;
       if (savedJson) {
         skipHistoryRef.current = true;
         await nextFabric.loadFromJSON(savedJson);
@@ -227,7 +232,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfDoc, pageNumber, pageStates, pushHistory, tool, zoom]);
+  }, [pdfDoc, pageNumber, pushHistory, tool, zoom]);
 
   const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
     setIsLoading(true);
@@ -239,6 +244,7 @@ export function FunctionalPdfEditor() {
       setFileName(name);
       setPageNumber(1);
       setPageCount(doc.numPages);
+      pageStatesRef.current = {};
       setPageStates({});
       setMatches([]);
       historyRef.current = {};
@@ -431,7 +437,7 @@ export function FunctionalPdfEditor() {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
-        const state = pageNum === pageNumber ? fabricRef.current?.toJSON() : pageStates[pageNum]?.json;
+        const state = pageNum === pageNumber ? fabricRef.current?.toJSON() : pageStatesRef.current[pageNum]?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
@@ -454,7 +460,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsLoading(false);
     }
-  }, [fileName, pageNumber, pageStates, pdfBytes, pdfDoc, savePageState]);
+  }, [fileName, pageNumber, pdfBytes, pdfDoc, savePageState]);
 
   const setSelectedColor = useCallback((color: string) => {
     const canvas = fabricRef.current;
