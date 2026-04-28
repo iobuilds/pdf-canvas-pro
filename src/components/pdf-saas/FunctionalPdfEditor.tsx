@@ -632,7 +632,7 @@ export function FunctionalPdfEditor() {
             <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
             <label className={`${iconButton} relative overflow-hidden`}><Upload className="size-4" />Upload<input ref={fileInputRef} className={uploadInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
+            <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
