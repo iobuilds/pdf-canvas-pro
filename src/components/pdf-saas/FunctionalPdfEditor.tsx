@@ -604,6 +604,46 @@ export function FunctionalPdfEditor() {
     }
   }, [fileName, pageNumber, pdfBytes, pdfDoc, savePageState]);
 
+  const downloadSelectedAreaPng = useCallback(() => {
+    const pdfCanvas = pdfCanvasRef.current;
+    const canvas = fabricRef.current;
+    if (!pdfCanvas || !canvas) return;
+    const active = canvas.getActiveObject();
+    const cropArea = active?.get("name") === CROP_AREA_NAME ? active : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+    if (!cropArea) {
+      toast.error("Select a crop area first.");
+      return;
+    }
+    const rect = cropArea.getBoundingRect();
+    const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+    const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = Math.max(1, Math.round(rect.width * pixelRatioX));
+    exportCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
+    const context = exportCanvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(pdfCanvas, rect.left * pixelRatioX, rect.top * pixelRatioY, rect.width * pixelRatioX, rect.height * pixelRatioY, 0, 0, exportCanvas.width, exportCanvas.height);
+    const overlayUrl = canvas.toDataURL({ format: "png", left: rect.left, top: rect.top, width: rect.width, height: rect.height, multiplier: pixelRatioX });
+    const overlay = new Image();
+    overlay.onload = () => {
+      context.drawImage(overlay, 0, 0, exportCanvas.width, exportCanvas.height);
+      exportCanvas.toBlob((blob) => {
+        if (!blob) return;
+        if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
+        const url = URL.createObjectURL(blob);
+        setPngPreviewUrl(url);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Selected area downloaded as PNG");
+      }, "image/png");
+    };
+    overlay.src = overlayUrl;
+  }, [fileName, pageNumber, pngPreviewUrl]);
+
   const setSelectedColor = useCallback((color: string) => {
     const canvas = fabricRef.current;
     const active = canvas?.getActiveObject();
