@@ -197,7 +197,7 @@ export function FunctionalPdfEditor() {
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       context.clearRect(0, 0, viewport.width, viewport.height);
 
-      const task = page.render({ canvas: pdfCanvas, canvasContext: context, viewport });
+      const task = page.render({ canvas: null, canvasContext: context, viewport });
       renderTaskRef.current = task;
       await task.promise;
       renderTaskRef.current = null;
