@@ -195,6 +195,7 @@ export function FunctionalPdfEditor() {
   const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
+  const [manualFontFamily, setManualFontFamily] = useState("");
 
   useEffect(() => {
     toolRef.current = tool;
@@ -486,7 +487,8 @@ export function FunctionalPdfEditor() {
     [validateAndLoadFile],
   );
 
-  const addText = useCallback(() => {
+  const addText = useCallback(async () => {
+    await loadSystemFonts();
     const canvas = requireCanvas();
     if (!canvas) return;
     const text = new fabric.IText("Edit text", {
@@ -507,7 +509,7 @@ export function FunctionalPdfEditor() {
     text.enterEditing();
     canvas.requestRenderAll();
     setTool("select");
-  }, [requireCanvas]);
+  }, [loadSystemFonts, requireCanvas]);
 
   const addRect = useCallback(
     (highlight = false) => {
