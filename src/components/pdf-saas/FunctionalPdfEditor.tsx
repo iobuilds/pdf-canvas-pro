@@ -864,17 +864,22 @@ export function FunctionalPdfEditor() {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
-        const state =
-          pageNum === pageNumber
-            ? fabricRef.current?.toJSON()
-            : pageStatesRef.current[pageNum]?.json;
+        const savedPageState = pageStatesRef.current[pageNum];
+        const isCurrentPage = pageNum === pageNumber;
+        const state = isCurrentPage ? fabricRef.current?.toJSON() : savedPageState?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
+        const sourceWidth = isCurrentPage
+          ? (fabricRef.current?.getWidth() ?? viewport.width)
+          : (savedPageState?.canvasWidth ?? viewport.width);
+        const sourceHeight = isCurrentPage
+          ? (fabricRef.current?.getHeight() ?? viewport.height)
+          : (savedPageState?.canvasHeight ?? viewport.height);
         const tempEl = document.createElement("canvas");
         const temp = new fabric.StaticCanvas(tempEl, {
-          width: viewport.width,
-          height: viewport.height,
+          width: sourceWidth,
+          height: sourceHeight,
         });
         await temp.loadFromJSON(state);
         temp.renderAll();
