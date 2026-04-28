@@ -171,6 +171,7 @@ export function FunctionalPdfEditor() {
   const historyRef = useRef<Record<number, string[]>>({});
   const historyIndexRef = useRef<Record<number, number>>({});
   const renderTaskRef = useRef<RenderTask | null>(null);
+  const thumbnailJobRef = useRef(0);
   const pdfjsRef = useRef<PdfJsModule | null>(null);
   const skipHistoryRef = useRef(false);
   const toolRef = useRef<Tool>("select");
@@ -282,18 +283,26 @@ export function FunctionalPdfEditor() {
   );
 
   const generatePageThumbnails = useCallback(async (doc: PdfDocumentProxy) => {
+    const jobId = (thumbnailJobRef.current += 1);
     for (let pageIndex = 1; pageIndex <= doc.numPages; pageIndex += 1) {
+      if (thumbnailJobRef.current !== jobId) return;
       try {
+        await new Promise<void>((resolve) =>
+          window.setTimeout(resolve, pageIndex === 1 ? 100 : 20),
+        );
         const page = await doc.getPage(pageIndex);
         const viewport = page.getViewport({ scale: 1 });
-        const scale = Math.min(64 / viewport.width, 82 / viewport.height);
+        const scale = Math.min(88 / viewport.width, 112 / viewport.height);
         const thumbnailViewport = page.getViewport({ scale });
         const thumbnailCanvas = document.createElement("canvas");
         const context = thumbnailCanvas.getContext("2d");
         if (!context) continue;
         thumbnailCanvas.width = Math.max(1, Math.floor(thumbnailViewport.width));
         thumbnailCanvas.height = Math.max(1, Math.floor(thumbnailViewport.height));
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
         await page.render({ canvas: thumbnailCanvas, viewport: thumbnailViewport }).promise;
+        if (thumbnailJobRef.current !== jobId) return;
         const nextState = {
           ...pageStatesRef.current,
           [pageIndex]: {
@@ -308,6 +317,21 @@ export function FunctionalPdfEditor() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!pdfDoc || !pageCount) return;
+    if (
+      Array.from({ length: pageCount }, (_, index) => index + 1).every(
+        (page) => pageStatesRef.current[page]?.thumbnail,
+      )
+    ) {
+      return;
+    }
+    void generatePageThumbnails(pdfDoc);
+    return () => {
+      thumbnailJobRef.current += 1;
+    };
+  }, [generatePageThumbnails, pageCount, pdfDoc]);
 
   const fitPageToWindow = useCallback(async () => {
     if (!pdfDoc || !workspaceRef.current) return;
