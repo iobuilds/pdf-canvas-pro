@@ -558,13 +558,13 @@ export function FunctionalPdfEditor() {
           <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
             <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
             <button className={iconButton} onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Upload</button>
-            <button className={iconButton} onClick={addText}><Type className="size-4" />Text</button>
-            <button className={iconButton} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
-            <button className={iconButton} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
-            <button className={iconButton} onClick={addCircle}><Circle className="size-4" />Circle</button>
-            <button className={iconButton} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
-            <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
-            <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
+            <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
+            <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
           </div>
 
           <div className="flex items-center gap-2">
