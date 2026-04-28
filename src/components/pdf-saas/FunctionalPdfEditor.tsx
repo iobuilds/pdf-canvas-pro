@@ -36,6 +36,8 @@ type Tool = "select" | "text" | "rect" | "circle" | "highlight" | "pen" | "erase
 
 type PageState = {
   json: unknown | null;
+  canvasWidth?: number;
+  canvasHeight?: number;
   thumbnail?: string;
 };
 
@@ -236,7 +238,12 @@ export function FunctionalPdfEditor() {
     const json = canvas.toJSON();
     const nextState = {
       ...pageStatesRef.current,
-      [pageNumber]: { ...pageStatesRef.current[pageNumber], json },
+      [pageNumber]: {
+        ...pageStatesRef.current[pageNumber],
+        json,
+        canvasWidth: canvas.getWidth(),
+        canvasHeight: canvas.getHeight(),
+      },
     };
     pageStatesRef.current = nextState;
     setPageStates(nextState);
