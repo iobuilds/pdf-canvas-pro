@@ -23,14 +23,13 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import * as pdfjsLib from "pdfjs-dist";
 import { toast } from "sonner";
 
 import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-
-type PdfDocumentProxy = pdfjsLib.PDFDocumentProxy;
+type PdfJsModule = typeof import("pdfjs-dist");
+type PdfDocumentProxy = import("pdfjs-dist").PDFDocumentProxy;
+type RenderTask = import("pdfjs-dist").RenderTask;
 type FabricCanvas = fabric.Canvas;
 type Tool = "select" | "text" | "rect" | "circle" | "highlight" | "pen" | "eraser" | "image";
 
@@ -79,7 +78,8 @@ export function FunctionalPdfEditor() {
   const fabricRef = useRef<FabricCanvas | null>(null);
   const historyRef = useRef<Record<number, string[]>>({});
   const historyIndexRef = useRef<Record<number, number>>({});
-  const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
+  const renderTaskRef = useRef<RenderTask | null>(null);
+  const pdfjsRef = useRef<PdfJsModule | null>(null);
   const skipHistoryRef = useRef(false);
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
@@ -238,7 +238,10 @@ export function FunctionalPdfEditor() {
     setIsLoading(true);
     try {
       const copy = source.slice(0);
-      const doc = await pdfjsLib.getDocument({ data: copy.slice(0) }).promise;
+      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist"));
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+      pdfjsRef.current = pdfjs;
+      const doc = await pdfjs.getDocument({ data: copy.slice(0) }).promise;
       setPdfDoc(doc);
       setPdfBytes(source.slice(0));
       setFileName(name);
