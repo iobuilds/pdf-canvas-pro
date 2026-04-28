@@ -36,9 +36,16 @@ type PageState = {
   thumbnail?: string;
 };
 
+type FabricJson = {
+  version?: string;
+  objects?: unknown[];
+  [key: string]: unknown;
+};
+
 const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
+const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
@@ -56,6 +63,11 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error("Could not read this image."));
     reader.readAsDataURL(file);
   });
+}
+
+function asFabricJson(json: unknown): FabricJson {
+  if (json && typeof json === "object") return json as FabricJson;
+  return { version: "6.0.0", objects: [] };
 }
 
 async function urlToArrayBuffer(url: string) {
