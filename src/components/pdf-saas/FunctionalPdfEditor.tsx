@@ -286,6 +286,7 @@ export function FunctionalPdfEditor() {
       setIsEditorReady(true);
     } catch (error) {
       if (!(error instanceof Error && error.name === "RenderingCancelledException")) {
+        console.error("PDF render failed", error);
         toast.error(error instanceof Error ? error.message : "Could not render this page.");
       }
     } finally {
