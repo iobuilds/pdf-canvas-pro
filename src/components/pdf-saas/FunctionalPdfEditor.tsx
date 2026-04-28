@@ -634,9 +634,9 @@ export function FunctionalPdfEditor() {
           <div className="space-y-5">
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Font size</span>
-              <select className="h-10 w-full rounded-lg border border-input bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring" disabled={!selectedObject || selectedObject.type !== "i-text"} onChange={(e) => setSelectedFontSize(Number(e.target.value))} defaultValue="28">
-                {[12, 16, 20, 24, 28, 36, 48, 64].map((size) => <option key={size} value={size}>{size}px</option>)}
-              </select>
+              <div className="grid grid-cols-4 gap-2">
+                {[12, 20, 28, 48].map((size) => <button key={size} className={iconButton + " h-9 px-2"} disabled={!selectedObject || selectedObject.type !== "i-text"} onClick={() => setSelectedFontSize(size)}>{size}</button>)}
+              </div>
             </label>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color</span>
