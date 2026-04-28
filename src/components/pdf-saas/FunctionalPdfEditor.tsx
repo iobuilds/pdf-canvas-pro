@@ -462,6 +462,12 @@ export function FunctionalPdfEditor() {
       if (savedJson) {
         skipHistoryRef.current = true;
         await nextFabric.loadFromJSON(savedJson);
+          const savedState = pageStatesRef.current[pageNumber];
+          scaleCanvasObjects(
+            nextFabric,
+            savedState?.canvasWidth ?? viewport.width,
+            savedState?.canvasHeight ?? viewport.height,
+          );
         nextFabric.requestRenderAll();
         skipHistoryRef.current = false;
       } else if (!historyRef.current[pageNumber]) {
