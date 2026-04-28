@@ -24,11 +24,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
+import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
-type PdfJsModule = typeof import("pdfjs-dist");
-type PdfDocumentProxy = import("pdfjs-dist").PDFDocumentProxy;
-type RenderTask = import("pdfjs-dist").RenderTask;
+type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+type PdfDocumentProxy = import("pdfjs-dist/legacy/build/pdf.mjs").PDFDocumentProxy;
+type RenderTask = import("pdfjs-dist/legacy/build/pdf.mjs").RenderTask;
 type FabricCanvas = fabric.Canvas;
 type Tool = "select" | "text" | "rect" | "circle" | "highlight" | "pen" | "eraser" | "image";
 
@@ -46,6 +46,7 @@ type FabricJson = {
 const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
+const PDF_RENDER_TIMEOUT_MS = 7000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const CROP_AREA_NAME = "export-crop-area";
 
@@ -76,6 +77,16 @@ async function urlToArrayBuffer(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error("Could not load the sample PDF.");
   return response.arrayBuffer();
+}
+
+function renderWithTimeout(task: RenderTask) {
+  let timeoutId: number | null = null;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timeoutId = window.setTimeout(() => resolve("timeout"), PDF_RENDER_TIMEOUT_MS);
+  });
+  return Promise.race([task.promise.then(() => "done" as const), timeout]).finally(() => {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  });
 }
 
 const iconButton =
@@ -195,20 +206,25 @@ export function FunctionalPdfEditor() {
       const scale = fitScale * zoom;
       const viewport = page.getViewport({ scale });
       const pixelRatio = window.devicePixelRatio || 1;
+      const renderViewport = page.getViewport({ scale: scale * pixelRatio });
       const pdfCanvas = pdfCanvasRef.current;
       const context = pdfCanvas.getContext("2d");
       if (!context) return;
 
-      pdfCanvas.width = Math.floor(viewport.width * pixelRatio);
-      pdfCanvas.height = Math.floor(viewport.height * pixelRatio);
+      pdfCanvas.width = Math.floor(renderViewport.width);
+      pdfCanvas.height = Math.floor(renderViewport.height);
       pdfCanvas.style.width = `${Math.floor(viewport.width)}px`;
       pdfCanvas.style.height = `${Math.floor(viewport.height)}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      context.clearRect(0, 0, viewport.width, viewport.height);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
 
-      const task = page.render({ canvas: null, canvasContext: context, viewport });
+      const task = page.render({ canvas: pdfCanvas, viewport: renderViewport });
       renderTaskRef.current = task;
-      await task.promise;
+      const renderResult = await renderWithTimeout(task);
+      if (renderResult === "timeout") {
+        task.cancel();
+        toast.warning("PDF preview is taking too long, but editing tools are ready.");
+      }
       renderTaskRef.current = null;
 
       const existing = fabricRef.current;
@@ -281,6 +297,7 @@ export function FunctionalPdfEditor() {
       setIsEditorReady(true);
     } catch (error) {
       if (!(error instanceof Error && error.name === "RenderingCancelledException")) {
+        console.error("PDF render failed", error);
         toast.error(error instanceof Error ? error.message : "Could not render this page.");
       }
     } finally {
@@ -292,10 +309,10 @@ export function FunctionalPdfEditor() {
     setIsLoading(true);
     try {
       const copy = source.slice(0);
-      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist"));
+      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
       pdfjsRef.current = pdfjs;
-      const doc = await pdfjs.getDocument({ data: copy.slice(0) }).promise;
+      const doc = await pdfjs.getDocument({ data: copy.slice(0), disableFontFace: true, isOffscreenCanvasSupported: false }).promise;
       setPdfDoc(doc);
       setPdfBytes(source.slice(0));
       setFileName(name);
