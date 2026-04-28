@@ -667,6 +667,29 @@ export function FunctionalPdfEditor() {
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
           </div>
           <div className="space-y-5">
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rectangle fill</span>
+                <input className="h-9 w-12 rounded-lg border border-border bg-panel p-1" type="color" value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"} onChange={(event) => setRectFillColor(event.target.value)} />
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input className="size-4 accent-primary" type="checkbox" checked={rectApplyAllPages} onChange={(event) => setRectApplyAllPages(event.target.checked)} />
+                Apply new rectangles to all pages
+              </label>
+            </div>
+            <div className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Placement</span>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                  X
+                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.left ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("left", Number(event.target.value))} />
+                </label>
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                  Y
+                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.top ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("top", Number(event.target.value))} />
+                </label>
+              </div>
+            </div>
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Font size</span>
               <div className="grid grid-cols-4 gap-2">
