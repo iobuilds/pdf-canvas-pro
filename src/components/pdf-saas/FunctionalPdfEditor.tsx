@@ -295,10 +295,10 @@ export function FunctionalPdfEditor() {
         const thumbnailCanvas = document.createElement("canvas");
         const context = thumbnailCanvas.getContext("2d");
         if (!context) continue;
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
         thumbnailCanvas.width = Math.max(1, Math.floor(thumbnailViewport.width));
         thumbnailCanvas.height = Math.max(1, Math.floor(thumbnailViewport.height));
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
         await page.render({ canvas: thumbnailCanvas, viewport: thumbnailViewport }).promise;
         if (thumbnailJobRef.current !== jobId) return;
         const nextState = {
