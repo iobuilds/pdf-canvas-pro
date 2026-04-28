@@ -227,7 +227,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pageDoc, pdfDoc, pageNumber, pageStates, pushHistory, tool, zoom]);
+  }, [pdfDoc, pageNumber, pageStates, pushHistory, tool, zoom]);
 
   const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
     setIsLoading(true);
