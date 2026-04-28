@@ -1274,15 +1274,20 @@ export function FunctionalPdfEditor() {
                 Text options
               </span>
               <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-                System font
+                <span className="flex items-center justify-between gap-2">
+                  System font
+                  <button className="text-xs font-semibold text-primary" type="button" onClick={loadSystemFonts}>
+                    Load all
+                  </button>
+                </span>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   disabled={!selectedText}
                   value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
                   onChange={(event) => setSelectedFontFamily(event.target.value)}
                 >
-                  {SYSTEM_FONTS.map((font) => (
-                    <option key={font} value={font}>
+                  {availableFonts.map((font) => (
+                    <option key={font} value={font} style={{ fontFamily: font }}>
                       {font}
                     </option>
                   ))}
