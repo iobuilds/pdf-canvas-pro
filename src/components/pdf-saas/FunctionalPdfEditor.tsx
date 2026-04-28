@@ -281,6 +281,34 @@ export function FunctionalPdfEditor() {
     [pageNumber, savePageState],
   );
 
+  const generatePageThumbnails = useCallback(async (doc: PdfDocumentProxy) => {
+    for (let pageIndex = 1; pageIndex <= doc.numPages; pageIndex += 1) {
+      try {
+        const page = await doc.getPage(pageIndex);
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(64 / viewport.width, 82 / viewport.height);
+        const thumbnailViewport = page.getViewport({ scale });
+        const thumbnailCanvas = document.createElement("canvas");
+        const context = thumbnailCanvas.getContext("2d");
+        if (!context) continue;
+        thumbnailCanvas.width = Math.max(1, Math.floor(thumbnailViewport.width));
+        thumbnailCanvas.height = Math.max(1, Math.floor(thumbnailViewport.height));
+        await page.render({ canvas: thumbnailCanvas, viewport: thumbnailViewport }).promise;
+        const nextState = {
+          ...pageStatesRef.current,
+          [pageIndex]: {
+            ...pageStatesRef.current[pageIndex],
+            thumbnail: thumbnailCanvas.toDataURL("image/png"),
+          },
+        };
+        pageStatesRef.current = nextState;
+        setPageStates(nextState);
+      } catch (error) {
+        console.warn(`Could not render thumbnail for page ${pageIndex}`, error);
+      }
+    }
+  }, []);
+
   const fitPageToWindow = useCallback(async () => {
     if (!pdfDoc || !workspaceRef.current) return;
     const page = await pdfDoc.getPage(pageNumber);
