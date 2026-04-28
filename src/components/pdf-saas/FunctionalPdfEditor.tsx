@@ -469,12 +469,13 @@ export function FunctionalPdfEditor() {
       historyRef.current = {};
       historyIndexRef.current = {};
       toast.success("PDF loaded");
+      void generatePageThumbnails(doc);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [generatePageThumbnails]);
 
   useEffect(() => {
     renderPage();
