@@ -189,6 +189,7 @@ export function FunctionalPdfEditor() {
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
   const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
+  const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -204,6 +205,22 @@ export function FunctionalPdfEditor() {
     },
     [pngPreviewUrl],
   );
+
+  const loadSystemFonts = useCallback(async () => {
+    const queryLocalFonts = (window as FontAccessWindow).queryLocalFonts;
+    if (!queryLocalFonts) {
+      toast.info("Showing common system fonts supported by this browser.");
+      return;
+    }
+    try {
+      const fonts = await queryLocalFonts();
+      const fontFamilies = fonts.map((font) => font.family).filter(Boolean);
+      setAvailableFonts(Array.from(new Set([...SYSTEM_FONTS, ...fontFamilies])).sort());
+      toast.success("System fonts loaded");
+    } catch {
+      toast.info("Font permission was not allowed. Showing common system fonts.");
+    }
+  }, []);
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
