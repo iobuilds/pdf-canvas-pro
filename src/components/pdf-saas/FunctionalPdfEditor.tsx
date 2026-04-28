@@ -216,6 +216,7 @@ export function FunctionalPdfEditor() {
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
   const [manualFontFamily, setManualFontFamily] = useState("");
+  const [eraserSize, setEraserSize] = useState(18);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -438,9 +439,9 @@ export function FunctionalPdfEditor() {
       });
       nextFabric.backgroundColor = "transparent";
       nextFabric.freeDrawingBrush = new fabric.PencilBrush(nextFabric);
-      nextFabric.freeDrawingBrush.color = "#2563eb";
-      nextFabric.freeDrawingBrush.width = 3;
       const currentTool = toolRef.current;
+      nextFabric.freeDrawingBrush.color = "#2563eb";
+      nextFabric.freeDrawingBrush.width = currentTool === "eraser" ? eraserSize : 3;
       nextFabric.isDrawingMode = currentTool === "pen" || currentTool === "eraser";
       const fabricWrapper = nextFabric.wrapperEl;
       fabricWrapper.style.position = "absolute";
@@ -452,7 +453,7 @@ export function FunctionalPdfEditor() {
       nextFabric.upperCanvasEl.style.position = "absolute";
       if (currentTool === "eraser") {
         nextFabric.freeDrawingBrush.color = "#ffffff";
-        nextFabric.freeDrawingBrush.width = 18;
+        nextFabric.freeDrawingBrush.width = eraserSize;
       }
 
       fabricRef.current = nextFabric;
@@ -497,7 +498,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfDoc, pageNumber, pushHistory, zoom]);
+  }, [eraserSize, pdfDoc, pageNumber, pushHistory, zoom]);
 
   const loadPdf = useCallback(
     async (source: ArrayBuffer, name: string) => {
@@ -555,10 +556,10 @@ export function FunctionalPdfEditor() {
     });
     if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = tool === "eraser" ? "#ffffff" : "#2563eb";
-      canvas.freeDrawingBrush.width = tool === "eraser" ? 18 : 3;
+      canvas.freeDrawingBrush.width = tool === "eraser" ? eraserSize : 3;
     }
     canvas.requestRenderAll();
-  }, [tool]);
+  }, [eraserSize, tool]);
 
   const validateAndLoadFile = useCallback(
     async (file: File) => {
@@ -1166,6 +1167,19 @@ export function FunctionalPdfEditor() {
               <Eraser className="size-4" />
               Erase
             </button>
+            {tool === "eraser" && (
+              <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-panel px-3 text-xs font-semibold text-muted-foreground shadow-soft">
+                Size
+                <input
+                  className="h-7 w-16 rounded-md border border-input bg-surface px-2 text-center text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  type="number"
+                  min="4"
+                  max="80"
+                  value={eraserSize}
+                  onChange={(event) => setEraserSize(Math.min(80, Math.max(4, Number(event.target.value) || 4)))}
+                />
+              </label>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -1395,6 +1409,24 @@ export function FunctionalPdfEditor() {
                 </label>
               </div>
             </div>
+            {tool === "eraser" && (
+              <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Eraser
+                </span>
+                <label className="block space-y-2 text-xs font-medium text-muted-foreground">
+                  Size: {eraserSize}px
+                  <input
+                    className="w-full accent-primary"
+                    type="range"
+                    min="4"
+                    max="80"
+                    value={eraserSize}
+                    onChange={(event) => setEraserSize(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+            )}
             <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Text options
