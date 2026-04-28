@@ -677,7 +677,21 @@ export function FunctionalPdfEditor() {
 
       const canvas = fabricRef.current;
       const activeObjects = canvas?.getActiveObjects() ?? [];
-      if (!canvas || !activeObjects.length) return;
+      if (!canvas) return;
+
+      if (!activeObjects.length) {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          event.stopPropagation();
+          savePageState();
+          setPageNumber((page) =>
+            event.key === "ArrowLeft"
+              ? Math.max(1, page - 1)
+              : Math.min(pageCount || 1, page + 1),
+          );
+        }
+        return;
+      }
 
       const activeText = canvas.getActiveObject();
       if (activeText?.type === "i-text" && (activeText as fabric.IText).isEditing) return;
@@ -687,8 +701,6 @@ export function FunctionalPdfEditor() {
         deleteSelected();
         return;
       }
-
-      if (!overlayHostRef.current?.contains(document.activeElement)) return;
 
       const arrowMove: Record<string, [number, number]> = {
         ArrowUp: [0, -1],
@@ -717,7 +729,7 @@ export function FunctionalPdfEditor() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelected, pushHistory]);
+  }, [deleteSelected, pageCount, pushHistory, savePageState]);
 
   const clearObjects = useCallback(() => {
     const canvas = fabricRef.current;
