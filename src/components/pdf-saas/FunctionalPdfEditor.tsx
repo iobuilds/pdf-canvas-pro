@@ -1186,8 +1186,17 @@ export function FunctionalPdfEditor() {
                   setPageNumber(page);
                 }}
               >
-                <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-page text-xs font-bold shadow-soft">
-                  {page}
+                <div className="grid h-16 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-page text-xs font-bold shadow-soft">
+                  {pageStates[page]?.thumbnail ? (
+                    <img
+                      className="h-full w-full object-contain"
+                      src={pageStates[page]?.thumbnail}
+                      alt={`Page ${page} thumbnail`}
+                      loading="lazy"
+                    />
+                  ) : (
+                    page
+                  )}
                 </div>
                 <span className="text-sm font-medium">Page {page}</span>
               </button>
