@@ -164,6 +164,7 @@ export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
   const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
@@ -279,6 +280,28 @@ export function FunctionalPdfEditor() {
     },
     [pageNumber, savePageState],
   );
+
+  const fitPageToWindow = useCallback(async () => {
+    if (!pdfDoc || !workspaceRef.current) return;
+    const page = await pdfDoc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const baseFitScale = Math.min(CANVAS_MAX_WIDTH / viewport.width, 1.4);
+    const availableWidth = Math.max(280, workspaceRef.current.clientWidth - 48);
+    const availableHeight = Math.max(280, workspaceRef.current.clientHeight - 112);
+    const nextZoom = Math.min(
+      2.5,
+      Math.max(
+        0.35,
+        Number(
+          Math.min(
+            availableWidth / (viewport.width * baseFitScale),
+            availableHeight / (viewport.height * baseFitScale),
+          ).toFixed(2),
+        ),
+      ),
+    );
+    setZoom(nextZoom);
+  }, [pageNumber, pdfDoc]);
 
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
