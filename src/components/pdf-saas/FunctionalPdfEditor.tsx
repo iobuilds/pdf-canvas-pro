@@ -213,7 +213,6 @@ export function FunctionalPdfEditor() {
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
-  const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
   const [manualFontFamily, setManualFontFamily] = useState("");
@@ -643,43 +642,26 @@ export function FunctionalPdfEditor() {
       canvas.add(rect);
       canvas.setActiveObject(rect);
       canvas.requestRenderAll();
-      if (!highlight && rectApplyAllPages && pageCount > 1) {
-        const rectJson = rect.toObject();
-        const nextState = { ...pageStatesRef.current };
-        for (let page = 1; page <= pageCount; page += 1) {
-          if (page === pageNumber) continue;
-          const existingJson = asFabricJson(nextState[page]?.json);
-          nextState[page] = {
-            ...nextState[page],
-            json: {
-              ...existingJson,
-              objects: [
-                ...(Array.isArray(existingJson?.objects) ? existingJson.objects : []),
-                rectJson,
-              ],
-            },
-          };
-        }
-        pageStatesRef.current = nextState;
-        setPageStates(nextState);
-        toast.success("Rectangle added to all pages");
-      }
       setTool("select");
     },
-    [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas],
+    [rectFillColor, requireCanvas],
   );
 
-  const applySelectedRectToAllPages = useCallback(() => {
+  const applySelectedObjectToAllPages = useCallback(() => {
     const canvas = requireCanvas();
     const active = canvas?.getActiveObject();
-    if (!canvas || !active || active.type !== "rect" || pageCount <= 1) return;
-    const rectJson = active.toObject();
+    if (!canvas || !active || active.get("name") === CROP_AREA_NAME || pageCount <= 1) return;
+    active.setCoords();
+    const objectJson = active.toObject();
+    const currentPageJson = canvas.toJSON();
     const nextState = { ...pageStatesRef.current };
     for (let page = 1; page <= pageCount; page += 1) {
-      const currentJson = page === pageNumber ? canvas.toJSON() : nextState[page]?.json;
+      const currentJson = page === pageNumber ? currentPageJson : nextState[page]?.json;
       const existingJson = asFabricJson(currentJson);
       nextState[page] = {
         ...nextState[page],
+        canvasWidth: canvas.getWidth(),
+        canvasHeight: canvas.getHeight(),
         json:
           page === pageNumber
             ? existingJson
@@ -687,14 +669,14 @@ export function FunctionalPdfEditor() {
                 ...existingJson,
                 objects: [
                   ...(Array.isArray(existingJson.objects) ? existingJson.objects : []),
-                  rectJson,
+                  objectJson,
                 ],
               },
       };
     }
     pageStatesRef.current = nextState;
     setPageStates(nextState);
-    toast.success("Rectangle applied to every page");
+    toast.success("Selected element applied to every page");
   }, [pageCount, pageNumber, requireCanvas]);
 
   const addCircle = useCallback(() => {
@@ -1372,19 +1354,14 @@ export function FunctionalPdfEditor() {
                 ))}
               </div>
               <button
-                className={`${iconButton} w-full ${rectApplyAllPages ? activeButton : ""}`}
-                type="button"
-                onClick={() => setRectApplyAllPages((value) => !value)}
-              >
-                {rectApplyAllPages ? "All pages mode on" : "New rects: current page"}
-              </button>
-              <button
                 className={iconButton + " w-full"}
                 type="button"
-                disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1}
-                onClick={applySelectedRectToAllPages}
+                disabled={
+                  !selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1
+                }
+                onClick={applySelectedObjectToAllPages}
               >
-                Apply selected rect to all pages
+                Apply selected element to all pages
               </button>
             </div>
             <div className="space-y-2">
