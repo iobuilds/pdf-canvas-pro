@@ -3,6 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import * as fabric from "fabric";
 import {
   Circle,
+  Crop,
   Download,
   Eraser,
   FileText,
@@ -46,6 +47,7 @@ const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
+const CROP_AREA_NAME = "export-crop-area";
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
@@ -113,6 +115,7 @@ export function FunctionalPdfEditor() {
   const [matches, setMatches] = useState<number[]>([]);
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
   const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
+  const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -121,6 +124,10 @@ export function FunctionalPdfEditor() {
   useEffect(() => {
     pageStatesRef.current = pageStates;
   }, [pageStates]);
+
+  useEffect(() => () => {
+    if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
+  }, [pngPreviewUrl]);
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
@@ -474,6 +481,32 @@ export function FunctionalPdfEditor() {
     setTool("select");
   }, [requireCanvas]);
 
+  const addCropArea = useCallback(() => {
+    const canvas = requireCanvas();
+    if (!canvas) return;
+    canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME).forEach((object) => canvas.remove(object));
+    const width = Math.min(360, Math.max(180, canvas.getWidth() - 80));
+    const height = Math.min(240, Math.max(120, canvas.getHeight() - 80));
+    const cropArea = new fabric.Rect({
+      name: CROP_AREA_NAME,
+      left: Math.max(24, Math.round((canvas.getWidth() - width) / 2)),
+      top: Math.max(24, Math.round((canvas.getHeight() - height) / 2)),
+      width,
+      height,
+      fill: "rgba(37, 99, 235, 0.08)",
+      stroke: "#2563eb",
+      strokeDashArray: [8, 6],
+      strokeWidth: 2,
+      cornerStyle: "circle",
+      borderColor: "#2563eb",
+      cornerColor: "#2563eb",
+    });
+    canvas.add(cropArea);
+    canvas.setActiveObject(cropArea);
+    canvas.requestRenderAll();
+    setTool("select");
+  }, [requireCanvas]);
+
   const addImageFromFile = useCallback(async (file: File) => {
     const canvas = requireCanvas();
     if (!canvas) return;
@@ -571,6 +604,46 @@ export function FunctionalPdfEditor() {
     }
   }, [fileName, pageNumber, pdfBytes, pdfDoc, savePageState]);
 
+  const downloadSelectedAreaPng = useCallback(() => {
+    const pdfCanvas = pdfCanvasRef.current;
+    const canvas = fabricRef.current;
+    if (!pdfCanvas || !canvas) return;
+    const active = canvas.getActiveObject();
+    const cropArea = active?.get("name") === CROP_AREA_NAME ? active : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+    if (!cropArea) {
+      toast.error("Select a crop area first.");
+      return;
+    }
+    const rect = cropArea.getBoundingRect();
+    const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+    const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = Math.max(1, Math.round(rect.width * pixelRatioX));
+    exportCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
+    const context = exportCanvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(pdfCanvas, rect.left * pixelRatioX, rect.top * pixelRatioY, rect.width * pixelRatioX, rect.height * pixelRatioY, 0, 0, exportCanvas.width, exportCanvas.height);
+    const overlayUrl = canvas.toDataURL({ format: "png", left: rect.left, top: rect.top, width: rect.width, height: rect.height, multiplier: pixelRatioX });
+    const overlay = new Image();
+    overlay.onload = () => {
+      context.drawImage(overlay, 0, 0, exportCanvas.width, exportCanvas.height);
+      exportCanvas.toBlob((blob) => {
+        if (!blob) return;
+        if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
+        const url = URL.createObjectURL(blob);
+        setPngPreviewUrl(url);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Selected area downloaded as PNG");
+      }, "image/png");
+    };
+    overlay.src = overlayUrl;
+  }, [fileName, pageNumber, pngPreviewUrl]);
+
   const setSelectedColor = useCallback((color: string) => {
     const canvas = fabricRef.current;
     const active = canvas?.getActiveObject();
@@ -635,6 +708,7 @@ export function FunctionalPdfEditor() {
             <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Crop</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
             <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
             <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
@@ -643,6 +717,7 @@ export function FunctionalPdfEditor() {
           <div className="flex items-center gap-2">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo"><Undo2 className="size-4" /></button>
             <button className={iconButton} onClick={() => applyHistory(1)} aria-label="Redo"><Redo2 className="size-4" /></button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Crop className="size-4" />PNG</button>
             <button className={`${iconButton} ${activeButton}`} onClick={exportPdf}><Download className="size-4" />Export</button>
           </div>
         </div>
@@ -754,6 +829,13 @@ export function FunctionalPdfEditor() {
               <Trash2 className="size-4" /> Delete selected
             </button>
             <button className={iconButton + " w-full"} onClick={clearObjects}>Clear page overlay</button>
+            {pngPreviewUrl && (
+              <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PNG preview</span>
+                <img className="max-h-40 w-full rounded-lg border border-border object-contain" src={pngPreviewUrl} alt="Downloaded selected area preview" />
+                <a className={iconButton + " w-full"} href={pngPreviewUrl} download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}>Download again</a>
+              </div>
+            )}
             <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted-foreground">
               Everything runs locally in your browser. Double-click text to edit overlay text, drag objects to move, use handles to resize/rotate, and export to flatten edits into a new PDF.
             </div>
