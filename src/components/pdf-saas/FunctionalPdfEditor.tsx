@@ -484,7 +484,7 @@ export function FunctionalPdfEditor() {
   const addCropArea = useCallback(() => {
     const canvas = requireCanvas();
     if (!canvas) return;
-    canvas.getObjects().filter((object) => object.name === CROP_AREA_NAME).forEach((object) => canvas.remove(object));
+    canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME).forEach((object) => canvas.remove(object));
     const width = Math.min(360, Math.max(180, canvas.getWidth() - 80));
     const height = Math.min(240, Math.max(120, canvas.getHeight() - 80));
     const cropArea = new fabric.Rect({
