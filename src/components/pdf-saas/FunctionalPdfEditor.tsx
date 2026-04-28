@@ -36,9 +36,16 @@ type PageState = {
   thumbnail?: string;
 };
 
+type FabricJson = {
+  version?: string;
+  objects?: unknown[];
+  [key: string]: unknown;
+};
+
 const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
+const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 
 function readFileAsArrayBuffer(file: File) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
@@ -56,6 +63,11 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error("Could not read this image."));
     reader.readAsDataURL(file);
   });
+}
+
+function asFabricJson(json: unknown): FabricJson {
+  if (json && typeof json === "object") return json as FabricJson;
+  return { version: "6.0.0", objects: [] };
 }
 
 async function urlToArrayBuffer(url: string) {
@@ -397,11 +409,11 @@ export function FunctionalPdfEditor() {
       const nextState = { ...pageStatesRef.current };
       for (let page = 1; page <= pageCount; page += 1) {
         if (page === pageNumber) continue;
-        const existingJson = nextState[page]?.json as { objects?: unknown[] } | null | undefined;
+        const existingJson = asFabricJson(nextState[page]?.json);
         nextState[page] = {
           ...nextState[page],
           json: {
-            ...(existingJson ?? {}),
+            ...existingJson,
             objects: [...(Array.isArray(existingJson?.objects) ? existingJson.objects : []), rectJson],
           },
         };
@@ -412,6 +424,28 @@ export function FunctionalPdfEditor() {
     }
     setTool("select");
   }, [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas]);
+
+  const applySelectedRectToAllPages = useCallback(() => {
+    const canvas = requireCanvas();
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || active.type !== "rect" || pageCount <= 1) return;
+    const rectJson = active.toObject();
+    const nextState = { ...pageStatesRef.current };
+    for (let page = 1; page <= pageCount; page += 1) {
+      const currentJson = page === pageNumber ? canvas.toJSON() : nextState[page]?.json;
+      const existingJson = asFabricJson(currentJson);
+      nextState[page] = {
+        ...nextState[page],
+        json: page === pageNumber ? existingJson : {
+          ...existingJson,
+          objects: [...(Array.isArray(existingJson.objects) ? existingJson.objects : []), rectJson],
+        },
+      };
+    }
+    pageStatesRef.current = nextState;
+    setPageStates(nextState);
+    toast.success("Rectangle applied to every page");
+  }, [pageCount, pageNumber, requireCanvas]);
 
   const addCircle = useCallback(() => {
     const canvas = requireCanvas();
@@ -672,10 +706,17 @@ export function FunctionalPdfEditor() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rectangle fill</span>
                 <input className="h-9 w-12 rounded-lg border border-border bg-panel p-1" type="color" value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"} onChange={(event) => setRectFillColor(event.target.value)} />
               </div>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input className="size-4 accent-primary" type="checkbox" checked={rectApplyAllPages} onChange={(event) => setRectApplyAllPages(event.target.checked)} />
-                Apply new rectangles to all pages
-              </label>
+              <div className="grid grid-cols-6 gap-2">
+                {MAIN_RECT_COLORS.map((color) => (
+                  <button key={color} className={`h-8 rounded-lg border ${rectFillColor === color ? "border-primary ring-2 ring-ring" : "border-border"}`} style={{ backgroundColor: color }} onClick={() => setRectFillColor(color)} aria-label={`Choose rectangle fill ${color}`} />
+                ))}
+              </div>
+              <button className={`${iconButton} w-full ${rectApplyAllPages ? activeButton : ""}`} type="button" onClick={() => setRectApplyAllPages((value) => !value)}>
+                {rectApplyAllPages ? "All pages mode on" : "New rects: current page"}
+              </button>
+              <button className={iconButton + " w-full"} type="button" disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1} onClick={applySelectedRectToAllPages}>
+                Apply selected rect to all pages
+              </button>
             </div>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Placement</span>
@@ -699,7 +740,7 @@ export function FunctionalPdfEditor() {
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color</span>
               <div className="grid grid-cols-5 gap-2">
-                {["#111827", "#2563eb", "#dc2626", "#16a34a", "#facc15"].map((color) => (
+                {MAIN_RECT_COLORS.map((color) => (
                   <button key={color} className="h-8 rounded-lg border border-border" style={{ backgroundColor: color }} onClick={() => setSelectedColor(color)} aria-label={`Set color ${color}`} />
                 ))}
               </div>
