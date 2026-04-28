@@ -436,7 +436,7 @@ export function FunctionalPdfEditor() {
       const existingJson = asFabricJson(currentJson);
       nextState[page] = {
         ...nextState[page],
-        json: {
+        json: page === pageNumber ? existingJson : {
           ...existingJson,
           objects: [...(Array.isArray(existingJson.objects) ? existingJson.objects : []), rectJson],
         },
