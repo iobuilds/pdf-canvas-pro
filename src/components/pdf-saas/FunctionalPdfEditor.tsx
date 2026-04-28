@@ -623,7 +623,14 @@ export function FunctionalPdfEditor() {
     const context = exportCanvas.getContext("2d");
     if (!context) return;
     context.drawImage(pdfCanvas, rect.left * pixelRatioX, rect.top * pixelRatioY, rect.width * pixelRatioX, rect.height * pixelRatioY, 0, 0, exportCanvas.width, exportCanvas.height);
+    const wasCropVisible = cropArea.visible;
+    cropArea.set("visible", false);
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
     const overlayUrl = canvas.toDataURL({ format: "png", left: rect.left, top: rect.top, width: rect.width, height: rect.height, multiplier: pixelRatioX });
+    cropArea.set("visible", wasCropVisible);
+    if (active) canvas.setActiveObject(active);
+    canvas.requestRenderAll();
     const overlay = new Image();
     overlay.onload = () => {
       context.drawImage(overlay, 0, 0, exportCanvas.width, exportCanvas.height);
