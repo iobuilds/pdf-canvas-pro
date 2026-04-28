@@ -409,11 +409,11 @@ export function FunctionalPdfEditor() {
       const nextState = { ...pageStatesRef.current };
       for (let page = 1; page <= pageCount; page += 1) {
         if (page === pageNumber) continue;
-        const existingJson = nextState[page]?.json as { objects?: unknown[] } | null | undefined;
+        const existingJson = asFabricJson(nextState[page]?.json);
         nextState[page] = {
           ...nextState[page],
           json: {
-            ...(existingJson ?? {}),
+            ...existingJson,
             objects: [...(Array.isArray(existingJson?.objects) ? existingJson.objects : []), rectJson],
           },
         };
@@ -424,6 +424,28 @@ export function FunctionalPdfEditor() {
     }
     setTool("select");
   }, [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas]);
+
+  const applySelectedRectToAllPages = useCallback(() => {
+    const canvas = requireCanvas();
+    const active = canvas?.getActiveObject();
+    if (!canvas || !active || active.type !== "rect" || pageCount <= 1) return;
+    const rectJson = active.toObject();
+    const nextState = { ...pageStatesRef.current };
+    for (let page = 1; page <= pageCount; page += 1) {
+      const currentJson = page === pageNumber ? canvas.toJSON() : nextState[page]?.json;
+      const existingJson = asFabricJson(currentJson);
+      nextState[page] = {
+        ...nextState[page],
+        json: {
+          ...existingJson,
+          objects: [...(Array.isArray(existingJson.objects) ? existingJson.objects : []), rectJson],
+        },
+      };
+    }
+    pageStatesRef.current = nextState;
+    setPageStates(nextState);
+    toast.success("Rectangle applied to every page");
+  }, [pageCount, pageNumber, requireCanvas]);
 
   const addCircle = useCallback(() => {
     const canvas = requireCanvas();
