@@ -633,7 +633,7 @@ export function FunctionalPdfEditor() {
 
           <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
             <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
-            <button className={iconButton} onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Upload</button>
+            <label className={iconButton} htmlFor="pdf-upload-input"><Upload className="size-4" />Upload</label>
             <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
@@ -653,9 +653,9 @@ export function FunctionalPdfEditor() {
 
       <section className="grid h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
         <aside className="hidden overflow-y-auto border-r border-border bg-panel p-3 lg:block">
-          <button className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12" onClick={() => fileInputRef.current?.click()}>
+          <label className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12" htmlFor="pdf-upload-input">
             <Upload className="size-4" /> Upload PDF
-          </button>
+          </label>
           <div className="mb-3 flex items-center gap-2">
             <input className="min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Search text" value={searchText} onChange={(e) => setSearchText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && searchPdf()} />
             <button className={iconButton} onClick={searchPdf}>Go</button>
