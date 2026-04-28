@@ -918,13 +918,16 @@ export function FunctionalPdfEditor() {
       const canvas = fabricRef.current;
       const active = canvas?.getActiveObject();
       if (!canvas || !active || active.type !== "i-text") return;
+      if (fontFamily && !availableFonts.includes(fontFamily)) {
+        setAvailableFonts((fonts) => Array.from(new Set([...fonts, fontFamily])).sort());
+      }
       (active as fabric.IText).set("fontFamily", fontFamily);
       canvas.requestRenderAll();
       setSelectedObject(active);
       setSelectionVersion((value) => value + 1);
       pushHistory();
     },
-    [pushHistory],
+    [availableFonts, pushHistory],
   );
 
   const toggleSelectedTextStyle = useCallback(
