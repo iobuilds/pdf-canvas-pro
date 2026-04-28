@@ -454,8 +454,9 @@ export function FunctionalPdfEditor() {
         pdfPage.drawImage(image, { x: 0, y: 0, width, height });
       }
       const bytes = await pdfLibDoc.save();
-      const exportBytes = new Uint8Array(bytes);
-      const blob = new Blob([exportBytes], { type: "application/pdf" });
+      const exportBuffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(exportBuffer).set(bytes);
+      const blob = new Blob([exportBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
