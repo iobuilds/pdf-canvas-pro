@@ -24,11 +24,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
+import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
-type PdfJsModule = typeof import("pdfjs-dist");
-type PdfDocumentProxy = import("pdfjs-dist").PDFDocumentProxy;
-type RenderTask = import("pdfjs-dist").RenderTask;
+type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+type PdfDocumentProxy = import("pdfjs-dist/legacy/build/pdf.mjs").PDFDocumentProxy;
+type RenderTask = import("pdfjs-dist/legacy/build/pdf.mjs").RenderTask;
 type FabricCanvas = fabric.Canvas;
 type Tool = "select" | "text" | "rect" | "circle" | "highlight" | "pen" | "eraser" | "image";
 
@@ -294,10 +294,10 @@ export function FunctionalPdfEditor() {
     setIsLoading(true);
     try {
       const copy = source.slice(0);
-      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist"));
+      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
       pdfjsRef.current = pdfjs;
-      const doc = await pdfjs.getDocument({ data: copy.slice(0) }).promise;
+      const doc = await pdfjs.getDocument({ data: copy.slice(0), disableFontFace: true, isOffscreenCanvasSupported: false }).promise;
       setPdfDoc(doc);
       setPdfBytes(source.slice(0));
       setFileName(name);
