@@ -446,36 +446,39 @@ export function FunctionalPdfEditor() {
     }
   }, [pdfDoc, pageNumber, pushHistory, zoom]);
 
-  const loadPdf = useCallback(async (source: ArrayBuffer, name: string) => {
-    setIsLoading(true);
-    try {
-      const copy = source.slice(0);
-      const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
-      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-      pdfjsRef.current = pdfjs;
-      const doc = await pdfjs.getDocument({
-        data: copy.slice(0),
-        disableFontFace: true,
-        isOffscreenCanvasSupported: false,
-      }).promise;
-      setPdfDoc(doc);
-      setPdfBytes(source.slice(0));
-      setFileName(name);
-      setPageNumber(1);
-      setPageCount(doc.numPages);
-      pageStatesRef.current = {};
-      setPageStates({});
-      setMatches([]);
-      historyRef.current = {};
-      historyIndexRef.current = {};
-      toast.success("PDF loaded");
-      void generatePageThumbnails(doc);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [generatePageThumbnails]);
+  const loadPdf = useCallback(
+    async (source: ArrayBuffer, name: string) => {
+      setIsLoading(true);
+      try {
+        const copy = source.slice(0);
+        const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
+        pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        pdfjsRef.current = pdfjs;
+        const doc = await pdfjs.getDocument({
+          data: copy.slice(0),
+          disableFontFace: true,
+          isOffscreenCanvasSupported: false,
+        }).promise;
+        setPdfDoc(doc);
+        setPdfBytes(source.slice(0));
+        setFileName(name);
+        setPageNumber(1);
+        setPageCount(doc.numPages);
+        pageStatesRef.current = {};
+        setPageStates({});
+        setMatches([]);
+        historyRef.current = {};
+        historyIndexRef.current = {};
+        toast.success("PDF loaded");
+        void generatePageThumbnails(doc);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [generatePageThumbnails],
+  );
 
   useEffect(() => {
     renderPage();
