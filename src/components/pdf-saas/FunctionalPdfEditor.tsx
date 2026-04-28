@@ -1166,7 +1166,7 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div className="relative min-w-0 overflow-auto bg-editor p-3 md:p-6">
+        <div ref={workspaceRef} className="relative min-w-0 overflow-auto bg-editor p-3 md:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1195,7 +1195,7 @@ export function FunctionalPdfEditor() {
               >
                 <ZoomIn className="size-4" />
               </button>
-              <button className={iconButton} onClick={() => setZoom(1)}>
+              <button className={iconButton} disabled={!pdfDoc} onClick={() => void fitPageToWindow()}>
                 <RotateCw className="size-4" />
                 Fit
               </button>
