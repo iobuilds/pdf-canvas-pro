@@ -36,6 +36,8 @@ type Tool = "select" | "text" | "rect" | "circle" | "highlight" | "pen" | "erase
 
 type PageState = {
   json: unknown | null;
+  canvasWidth?: number;
+  canvasHeight?: number;
   thumbnail?: string;
 };
 
@@ -154,6 +156,23 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
   };
 }
 
+function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
+  const toWidth = canvas.getWidth();
+  const toHeight = canvas.getHeight();
+  if (!fromWidth || !fromHeight || (fromWidth === toWidth && fromHeight === toHeight)) return;
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
+  canvas.getObjects().forEach((object) => {
+    object.set({
+      left: (object.left ?? 0) * scaleX,
+      top: (object.top ?? 0) * scaleY,
+      scaleX: (object.scaleX ?? 1) * scaleX,
+      scaleY: (object.scaleY ?? 1) * scaleY,
+    });
+    object.setCoords();
+  });
+}
+
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
@@ -236,7 +255,12 @@ export function FunctionalPdfEditor() {
     const json = canvas.toJSON();
     const nextState = {
       ...pageStatesRef.current,
-      [pageNumber]: { ...pageStatesRef.current[pageNumber], json },
+      [pageNumber]: {
+        ...pageStatesRef.current[pageNumber],
+        json,
+        canvasWidth: canvas.getWidth(),
+        canvasHeight: canvas.getHeight(),
+      },
     };
     pageStatesRef.current = nextState;
     setPageStates(nextState);
@@ -438,6 +462,12 @@ export function FunctionalPdfEditor() {
       if (savedJson) {
         skipHistoryRef.current = true;
         await nextFabric.loadFromJSON(savedJson);
+          const savedState = pageStatesRef.current[pageNumber];
+          scaleCanvasObjects(
+            nextFabric,
+            savedState?.canvasWidth ?? viewport.width,
+            savedState?.canvasHeight ?? viewport.height,
+          );
         nextFabric.requestRenderAll();
         skipHistoryRef.current = false;
       } else if (!historyRef.current[pageNumber]) {
@@ -857,17 +887,22 @@ export function FunctionalPdfEditor() {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
-        const state =
-          pageNum === pageNumber
-            ? fabricRef.current?.toJSON()
-            : pageStatesRef.current[pageNum]?.json;
+        const savedPageState = pageStatesRef.current[pageNum];
+        const isCurrentPage = pageNum === pageNumber;
+        const state = isCurrentPage ? fabricRef.current?.toJSON() : savedPageState?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
+        const sourceWidth = isCurrentPage
+          ? (fabricRef.current?.getWidth() ?? viewport.width)
+          : (savedPageState?.canvasWidth ?? viewport.width);
+        const sourceHeight = isCurrentPage
+          ? (fabricRef.current?.getHeight() ?? viewport.height)
+          : (savedPageState?.canvasHeight ?? viewport.height);
         const tempEl = document.createElement("canvas");
         const temp = new fabric.StaticCanvas(tempEl, {
-          width: viewport.width,
-          height: viewport.height,
+          width: sourceWidth,
+          height: sourceHeight,
         });
         await temp.loadFromJSON(state);
         temp.renderAll();
