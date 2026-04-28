@@ -80,7 +80,7 @@ async function urlToArrayBuffer(url: string) {
 }
 
 function renderWithTimeout(task: RenderTask) {
-  let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+  let timeoutId: number | null = null;
   const timeout = new Promise<"timeout">((resolve) => {
     timeoutId = window.setTimeout(() => resolve("timeout"), PDF_RENDER_TIMEOUT_MS);
   });
