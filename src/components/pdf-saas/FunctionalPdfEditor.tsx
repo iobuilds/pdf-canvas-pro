@@ -79,6 +79,7 @@ async function urlToArrayBuffer(url: string) {
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
+const uploadInputClass = "absolute inset-0 cursor-pointer opacity-0";
 
 export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -354,6 +355,12 @@ export function FunctionalPdfEditor() {
     await loadPdf(buffer, file.name);
   }, [loadPdf]);
 
+  const handlePdfInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void validateAndLoadFile(file);
+  }, [validateAndLoadFile]);
+
   const handleDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setIsDraggingOver(false);
@@ -609,9 +616,6 @@ export function FunctionalPdfEditor() {
       onDragLeave={() => setIsDraggingOver(false)}
       onDrop={handleDrop}
     >
-      <input ref={fileInputRef} className="hidden" type="file" accept="application/pdf,.pdf" onChange={(event) => event.target.files?.[0] && validateAndLoadFile(event.target.files[0])} />
-      <input ref={imageInputRef} className="hidden" type="file" accept="image/*" onChange={(event) => event.target.files?.[0] && addImageFromFile(event.target.files[0])} />
-
       <header className="sticky top-0 z-30 border-b border-border bg-panel/95 shadow-soft backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-3 px-3 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
@@ -626,9 +630,9 @@ export function FunctionalPdfEditor() {
 
           <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
             <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
-            <button className={iconButton} onClick={() => fileInputRef.current?.click()}><Upload className="size-4" />Upload</button>
+            <label className={`${iconButton} relative overflow-hidden`}><Upload className="size-4" />Upload<input ref={fileInputRef} className={uploadInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={() => imageInputRef.current?.click()}><ImagePlus className="size-4" />Image</button>
+            <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
@@ -646,9 +650,10 @@ export function FunctionalPdfEditor() {
 
       <section className="grid h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
         <aside className="hidden overflow-y-auto border-r border-border bg-panel p-3 lg:block">
-          <button className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12" onClick={() => fileInputRef.current?.click()}>
+          <label className="relative mb-3 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12">
             <Upload className="size-4" /> Upload PDF
-          </button>
+            <input className={uploadInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} />
+          </label>
           <div className="mb-3 flex items-center gap-2">
             <input className="min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Search text" value={searchText} onChange={(e) => setSearchText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && searchPdf()} />
             <button className={iconButton} onClick={searchPdf}>Go</button>
