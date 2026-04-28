@@ -1195,7 +1195,11 @@ export function FunctionalPdfEditor() {
               >
                 <ZoomIn className="size-4" />
               </button>
-              <button className={iconButton} disabled={!pdfDoc} onClick={() => void fitPageToWindow()}>
+              <button
+                className={iconButton}
+                disabled={!pdfDoc}
+                onClick={() => void fitPageToWindow()}
+              >
                 <RotateCw className="size-4" />
                 Fit
               </button>
