@@ -203,10 +203,15 @@ export function FunctionalPdfEditor() {
       pdfCanvas.height = Math.floor(viewport.height * pixelRatio);
       pdfCanvas.style.width = `${Math.floor(viewport.width)}px`;
       pdfCanvas.style.height = `${Math.floor(viewport.height)}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      context.clearRect(0, 0, viewport.width, viewport.height);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
 
-      const task = page.render({ canvas: null, canvasContext: context, viewport });
+      const task = page.render({
+        canvas: null,
+        canvasContext: context,
+        viewport,
+        transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
+      });
       renderTaskRef.current = task;
       await task.promise;
       renderTaskRef.current = null;
