@@ -79,7 +79,7 @@ async function urlToArrayBuffer(url: string) {
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
-const fileInputClass = "fixed left-0 top-0 size-px opacity-0 pointer-events-none";
+const uploadInputClass = "absolute inset-0 cursor-pointer opacity-0";
 
 export function FunctionalPdfEditor() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
