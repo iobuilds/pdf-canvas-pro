@@ -1248,7 +1248,7 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div ref={workspaceRef} className="relative min-w-0 overflow-auto bg-editor p-3 md:p-6">
+        <div ref={workspaceRef} className="relative flex min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1288,17 +1288,19 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="mx-auto w-fit animate-editor-enter rounded-sm shadow-page">
-            <div className="relative bg-page">
-              <canvas ref={pdfCanvasRef} className="block" />
-              <div ref={overlayHostRef} className="absolute inset-0" />
-              {(isLoading || isRendering) && (
-                <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
-                  <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
-                    <Loader2 className="size-4 animate-spin text-primary" /> Rendering PDF
+          <div className="grid min-h-[calc(100%-4.5rem)] min-w-max flex-1 place-items-center py-6">
+            <div className="w-fit animate-editor-enter rounded-sm shadow-page">
+              <div className="relative bg-page">
+                <canvas ref={pdfCanvasRef} className="block" />
+                <div ref={overlayHostRef} className="absolute inset-0" />
+                {(isLoading || isRendering) && (
+                  <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
+                      <Loader2 className="size-4 animate-spin text-primary" /> Rendering PDF
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
