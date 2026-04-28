@@ -651,7 +651,7 @@ export function FunctionalPdfEditor() {
   const applySelectedObjectToAllPages = useCallback(() => {
     const canvas = requireCanvas();
     const active = canvas?.getActiveObject();
-    if (!canvas || !active || active.name === CROP_AREA_NAME || pageCount <= 1) return;
+    if (!canvas || !active || active.get("name") === CROP_AREA_NAME || pageCount <= 1) return;
     active.setCoords();
     const objectJson = active.toObject();
     const currentPageJson = canvas.toJSON();
@@ -1365,9 +1365,9 @@ export function FunctionalPdfEditor() {
                 className={iconButton + " w-full"}
                 type="button"
                 disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1}
-                onClick={applySelectedRectToAllPages}
+                onClick={applySelectedObjectToAllPages}
               >
-                Apply selected rect to all pages
+                Apply selected element to all pages
               </button>
             </div>
             <div className="space-y-2">
