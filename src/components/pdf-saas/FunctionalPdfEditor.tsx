@@ -708,6 +708,7 @@ export function FunctionalPdfEditor() {
             <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Crop</button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
             <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
             <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
@@ -716,6 +717,7 @@ export function FunctionalPdfEditor() {
           <div className="flex items-center gap-2">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo"><Undo2 className="size-4" /></button>
             <button className={iconButton} onClick={() => applyHistory(1)} aria-label="Redo"><Redo2 className="size-4" /></button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Crop className="size-4" />PNG</button>
             <button className={`${iconButton} ${activeButton}`} onClick={exportPdf}><Download className="size-4" />Export</button>
           </div>
         </div>
