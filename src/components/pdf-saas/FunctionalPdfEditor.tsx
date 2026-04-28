@@ -86,7 +86,10 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
   const left = Math.max(0, cropArea.left ?? 0);
   const top = Math.max(0, cropArea.top ?? 0);
   const width = Math.min(canvas.getWidth() - left, (cropArea.width ?? 0) * (cropArea.scaleX ?? 1));
-  const height = Math.min(canvas.getHeight() - top, (cropArea.height ?? 0) * (cropArea.scaleY ?? 1));
+  const height = Math.min(
+    canvas.getHeight() - top,
+    (cropArea.height ?? 0) * (cropArea.scaleY ?? 1),
+  );
 
   return {
     left: Math.round(left),
@@ -144,9 +147,12 @@ export function FunctionalPdfEditor() {
     pageStatesRef.current = pageStates;
   }, [pageStates]);
 
-  useEffect(() => () => {
-    if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
-  }, [pngPreviewUrl]);
+  useEffect(
+    () => () => {
+      if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
+    },
+    [pngPreviewUrl],
+  );
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
@@ -182,20 +188,23 @@ export function FunctionalPdfEditor() {
     return canvas;
   }, [isEditorReady]);
 
-  const applyHistory = useCallback(async (direction: -1 | 1) => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    const stack = historyRef.current[pageNumber] ?? [];
-    const currentIndex = historyIndexRef.current[pageNumber] ?? -1;
-    const nextIndex = currentIndex + direction;
-    if (nextIndex < 0 || nextIndex >= stack.length) return;
-    skipHistoryRef.current = true;
-    await canvas.loadFromJSON(JSON.parse(stack[nextIndex]));
-    canvas.requestRenderAll();
-    skipHistoryRef.current = false;
-    historyIndexRef.current[pageNumber] = nextIndex;
-    savePageState();
-  }, [pageNumber, savePageState]);
+  const applyHistory = useCallback(
+    async (direction: -1 | 1) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      const stack = historyRef.current[pageNumber] ?? [];
+      const currentIndex = historyIndexRef.current[pageNumber] ?? -1;
+      const nextIndex = currentIndex + direction;
+      if (nextIndex < 0 || nextIndex >= stack.length) return;
+      skipHistoryRef.current = true;
+      await canvas.loadFromJSON(JSON.parse(stack[nextIndex]));
+      canvas.requestRenderAll();
+      skipHistoryRef.current = false;
+      historyIndexRef.current[pageNumber] = nextIndex;
+      savePageState();
+    },
+    [pageNumber, savePageState],
+  );
 
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !pdfCanvasRef.current || !overlayHostRef.current) return;
@@ -319,7 +328,11 @@ export function FunctionalPdfEditor() {
       const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
       pdfjsRef.current = pdfjs;
-      const doc = await pdfjs.getDocument({ data: copy.slice(0), disableFontFace: true, isOffscreenCanvasSupported: false }).promise;
+      const doc = await pdfjs.getDocument({
+        data: copy.slice(0),
+        disableFontFace: true,
+        isOffscreenCanvasSupported: false,
+      }).promise;
       setPdfDoc(doc);
       setPdfBytes(source.slice(0));
       setFileName(name);
@@ -365,31 +378,40 @@ export function FunctionalPdfEditor() {
     canvas.requestRenderAll();
   }, [tool]);
 
-  const validateAndLoadFile = useCallback(async (file: File) => {
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("Only PDF files are supported.");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("PDF must be 500MB or smaller.");
-      return;
-    }
-    const buffer = await readFileAsArrayBuffer(file);
-    await loadPdf(buffer, file.name);
-  }, [loadPdf]);
+  const validateAndLoadFile = useCallback(
+    async (file: File) => {
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        toast.error("Only PDF files are supported.");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("PDF must be 500MB or smaller.");
+        return;
+      }
+      const buffer = await readFileAsArrayBuffer(file);
+      await loadPdf(buffer, file.name);
+    },
+    [loadPdf],
+  );
 
-  const handlePdfInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (file) void validateAndLoadFile(file);
-  }, [validateAndLoadFile]);
+  const handlePdfInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (file) void validateAndLoadFile(file);
+    },
+    [validateAndLoadFile],
+  );
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
-    event.preventDefault();
-    setIsDraggingOver(false);
-    const file = event.dataTransfer.files[0];
-    if (file) validateAndLoadFile(file);
-  }, [validateAndLoadFile]);
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      setIsDraggingOver(false);
+      const file = event.dataTransfer.files[0];
+      if (file) validateAndLoadFile(file);
+    },
+    [validateAndLoadFile],
+  );
 
   const addText = useCallback(() => {
     const canvas = requireCanvas();
@@ -412,48 +434,54 @@ export function FunctionalPdfEditor() {
     setTool("select");
   }, [requireCanvas]);
 
-  const addRect = useCallback((highlight = false) => {
-    const canvas = requireCanvas();
-    if (!canvas) return;
-    const width = highlight ? 260 : 180;
-    const height = highlight ? 34 : 120;
-    const left = Math.max(24, Math.round((canvas.getWidth() - width) / 2));
-    const top = Math.max(24, Math.round((canvas.getHeight() - height) / 2));
-    const rect = new fabric.Rect({
-      left,
-      top,
-      width,
-      height,
-      fill: highlight ? "rgba(250, 204, 21, 0.45)" : rectFillColor,
-      stroke: highlight ? "rgba(202, 138, 4, 0.8)" : "#2563eb",
-      strokeWidth: highlight ? 0 : 2,
-      cornerStyle: "circle",
-      borderColor: "#2563eb",
-      cornerColor: "#2563eb",
-    });
-    canvas.add(rect);
-    canvas.setActiveObject(rect);
-    canvas.requestRenderAll();
-    if (!highlight && rectApplyAllPages && pageCount > 1) {
-      const rectJson = rect.toObject();
-      const nextState = { ...pageStatesRef.current };
-      for (let page = 1; page <= pageCount; page += 1) {
-        if (page === pageNumber) continue;
-        const existingJson = asFabricJson(nextState[page]?.json);
-        nextState[page] = {
-          ...nextState[page],
-          json: {
-            ...existingJson,
-            objects: [...(Array.isArray(existingJson?.objects) ? existingJson.objects : []), rectJson],
-          },
-        };
+  const addRect = useCallback(
+    (highlight = false) => {
+      const canvas = requireCanvas();
+      if (!canvas) return;
+      const width = highlight ? 260 : 180;
+      const height = highlight ? 34 : 120;
+      const left = Math.max(24, Math.round((canvas.getWidth() - width) / 2));
+      const top = Math.max(24, Math.round((canvas.getHeight() - height) / 2));
+      const rect = new fabric.Rect({
+        left,
+        top,
+        width,
+        height,
+        fill: highlight ? "rgba(250, 204, 21, 0.45)" : rectFillColor,
+        stroke: highlight ? "rgba(202, 138, 4, 0.8)" : "#2563eb",
+        strokeWidth: highlight ? 0 : 2,
+        cornerStyle: "circle",
+        borderColor: "#2563eb",
+        cornerColor: "#2563eb",
+      });
+      canvas.add(rect);
+      canvas.setActiveObject(rect);
+      canvas.requestRenderAll();
+      if (!highlight && rectApplyAllPages && pageCount > 1) {
+        const rectJson = rect.toObject();
+        const nextState = { ...pageStatesRef.current };
+        for (let page = 1; page <= pageCount; page += 1) {
+          if (page === pageNumber) continue;
+          const existingJson = asFabricJson(nextState[page]?.json);
+          nextState[page] = {
+            ...nextState[page],
+            json: {
+              ...existingJson,
+              objects: [
+                ...(Array.isArray(existingJson?.objects) ? existingJson.objects : []),
+                rectJson,
+              ],
+            },
+          };
+        }
+        pageStatesRef.current = nextState;
+        setPageStates(nextState);
+        toast.success("Rectangle added to all pages");
       }
-      pageStatesRef.current = nextState;
-      setPageStates(nextState);
-      toast.success("Rectangle added to all pages");
-    }
-    setTool("select");
-  }, [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas]);
+      setTool("select");
+    },
+    [pageCount, pageNumber, rectApplyAllPages, rectFillColor, requireCanvas],
+  );
 
   const applySelectedRectToAllPages = useCallback(() => {
     const canvas = requireCanvas();
@@ -466,10 +494,16 @@ export function FunctionalPdfEditor() {
       const existingJson = asFabricJson(currentJson);
       nextState[page] = {
         ...nextState[page],
-        json: page === pageNumber ? existingJson : {
-          ...existingJson,
-          objects: [...(Array.isArray(existingJson.objects) ? existingJson.objects : []), rectJson],
-        },
+        json:
+          page === pageNumber
+            ? existingJson
+            : {
+                ...existingJson,
+                objects: [
+                  ...(Array.isArray(existingJson.objects) ? existingJson.objects : []),
+                  rectJson,
+                ],
+              },
       };
     }
     pageStatesRef.current = nextState;
@@ -500,7 +534,10 @@ export function FunctionalPdfEditor() {
   const addCropArea = useCallback(() => {
     const canvas = requireCanvas();
     if (!canvas) return;
-    canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME).forEach((object) => canvas.remove(object));
+    canvas
+      .getObjects()
+      .filter((object) => object.get("name") === CROP_AREA_NAME)
+      .forEach((object) => canvas.remove(object));
     const width = Math.min(360, Math.max(180, canvas.getWidth() - 80));
     const height = Math.min(240, Math.max(120, canvas.getHeight() - 80));
     const cropArea = new fabric.Rect({
@@ -523,21 +560,32 @@ export function FunctionalPdfEditor() {
     setTool("select");
   }, [requireCanvas]);
 
-  const addImageFromFile = useCallback(async (file: File) => {
-    const canvas = requireCanvas();
-    if (!canvas) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file.");
-      return;
-    }
-    const dataUrl = await readFileAsDataUrl(file);
-    const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
-    img.set({ left: 140, top: 140, scaleX: 0.35, scaleY: 0.35, cornerStyle: "circle", borderColor: "#2563eb", cornerColor: "#2563eb" });
-    canvas.add(img);
-    canvas.setActiveObject(img);
-    canvas.requestRenderAll();
-    setTool("select");
-  }, [requireCanvas]);
+  const addImageFromFile = useCallback(
+    async (file: File) => {
+      const canvas = requireCanvas();
+      if (!canvas) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please choose an image file.");
+        return;
+      }
+      const dataUrl = await readFileAsDataUrl(file);
+      const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
+      img.set({
+        left: 140,
+        top: 140,
+        scaleX: 0.35,
+        scaleY: 0.35,
+        cornerStyle: "circle",
+        borderColor: "#2563eb",
+        cornerColor: "#2563eb",
+      });
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.requestRenderAll();
+      setTool("select");
+    },
+    [requireCanvas],
+  );
 
   const deleteSelected = useCallback(() => {
     const canvas = fabricRef.current;
@@ -553,7 +601,8 @@ export function FunctionalPdfEditor() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      const isTyping =
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
       if (isTyping || (event.key !== "Delete" && event.key !== "Backspace")) return;
       if (!fabricRef.current?.getActiveObjects().length) return;
       event.preventDefault();
@@ -583,12 +632,19 @@ export function FunctionalPdfEditor() {
     for (let pageIndex = 1; pageIndex <= pdfDoc.numPages; pageIndex += 1) {
       const page = await pdfDoc.getPage(pageIndex);
       const content = await page.getTextContent();
-      const text = content.items.map((item) => ("str" in item ? item.str : "")).join(" ").toLowerCase();
+      const text = content.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(" ")
+        .toLowerCase();
       if (text.includes(needle)) found.push(pageIndex);
     }
     setMatches(found);
     if (found[0]) setPageNumber(found[0]);
-    toast(found.length ? `Found on ${found.length} page${found.length === 1 ? "" : "s"}` : "No matches found");
+    toast(
+      found.length
+        ? `Found on ${found.length} page${found.length === 1 ? "" : "s"}`
+        : "No matches found",
+    );
   }, [pdfDoc, searchText]);
 
   const exportPdf = useCallback(async () => {
@@ -599,12 +655,18 @@ export function FunctionalPdfEditor() {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
-        const state = pageNum === pageNumber ? fabricRef.current?.toJSON() : pageStatesRef.current[pageNum]?.json;
+        const state =
+          pageNum === pageNumber
+            ? fabricRef.current?.toJSON()
+            : pageStatesRef.current[pageNum]?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
         const tempEl = document.createElement("canvas");
-        const temp = new fabric.StaticCanvas(tempEl, { width: viewport.width, height: viewport.height });
+        const temp = new fabric.StaticCanvas(tempEl, {
+          width: viewport.width,
+          height: viewport.height,
+        });
         await temp.loadFromJSON(state);
         temp.renderAll();
         const dataUrl = temp.toDataURL({ format: "png", multiplier: 2 });
@@ -639,7 +701,10 @@ export function FunctionalPdfEditor() {
     const canvas = fabricRef.current;
     if (!pdfCanvas || !canvas) return;
     const active = canvas.getActiveObject();
-    const cropArea = active?.get("name") === CROP_AREA_NAME ? active : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+    const cropArea =
+      active?.get("name") === CROP_AREA_NAME
+        ? active
+        : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
     if (!cropArea) {
       toast.error("Select a crop area first.");
       return;
@@ -652,12 +717,29 @@ export function FunctionalPdfEditor() {
     exportCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
     const context = exportCanvas.getContext("2d");
     if (!context) return;
-    context.drawImage(pdfCanvas, rect.left * pixelRatioX, rect.top * pixelRatioY, rect.width * pixelRatioX, rect.height * pixelRatioY, 0, 0, exportCanvas.width, exportCanvas.height);
+    context.drawImage(
+      pdfCanvas,
+      rect.left * pixelRatioX,
+      rect.top * pixelRatioY,
+      rect.width * pixelRatioX,
+      rect.height * pixelRatioY,
+      0,
+      0,
+      exportCanvas.width,
+      exportCanvas.height,
+    );
     const wasCropVisible = cropArea.visible;
     cropArea.set("visible", false);
     canvas.discardActiveObject();
     canvas.requestRenderAll();
-    const overlayUrl = canvas.toDataURL({ format: "png", left: rect.left, top: rect.top, width: rect.width, height: rect.height, multiplier: pixelRatioX });
+    const overlayUrl = canvas.toDataURL({
+      format: "png",
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      multiplier: pixelRatioX,
+    });
     cropArea.set("visible", wasCropVisible);
     if (active) canvas.setActiveObject(active);
     canvas.requestRenderAll();
@@ -681,35 +763,44 @@ export function FunctionalPdfEditor() {
     overlay.src = overlayUrl;
   }, [fileName, pageNumber, pngPreviewUrl]);
 
-  const setSelectedColor = useCallback((color: string) => {
-    const canvas = fabricRef.current;
-    const active = canvas?.getActiveObject();
-    if (!canvas || !active) return;
-    active.set("fill", color);
-    if (active.type !== "i-text") active.set("stroke", color);
-    canvas.requestRenderAll();
-    pushHistory();
-  }, [pushHistory]);
+  const setSelectedColor = useCallback(
+    (color: string) => {
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (!canvas || !active) return;
+      active.set("fill", color);
+      if (active.type !== "i-text") active.set("stroke", color);
+      canvas.requestRenderAll();
+      pushHistory();
+    },
+    [pushHistory],
+  );
 
-  const setSelectedFontSize = useCallback((fontSize: number) => {
-    const canvas = fabricRef.current;
-    const active = canvas?.getActiveObject();
-    if (!canvas || !active || active.type !== "i-text") return;
-    (active as fabric.IText).set("fontSize", fontSize);
-    canvas.requestRenderAll();
-    pushHistory();
-  }, [pushHistory]);
+  const setSelectedFontSize = useCallback(
+    (fontSize: number) => {
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (!canvas || !active || active.type !== "i-text") return;
+      (active as fabric.IText).set("fontSize", fontSize);
+      canvas.requestRenderAll();
+      pushHistory();
+    },
+    [pushHistory],
+  );
 
-  const setSelectedPosition = useCallback((axis: "left" | "top", value: number) => {
-    const canvas = fabricRef.current;
-    const active = canvas?.getActiveObject();
-    if (!canvas || !active || Number.isNaN(value)) return;
-    active.set(axis, Math.max(0, value));
-    active.setCoords();
-    setSelectedObject(active);
-    canvas.requestRenderAll();
-    pushHistory();
-  }, [pushHistory]);
+  const setSelectedPosition = useCallback(
+    (axis: "left" | "top", value: number) => {
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (!canvas || !active || Number.isNaN(value)) return;
+      active.set(axis, Math.max(0, value));
+      active.setCoords();
+      setSelectedObject(active);
+      canvas.requestRenderAll();
+      pushHistory();
+    },
+    [pushHistory],
+  );
 
   const selectedDescription = useMemo(() => {
     if (!selectedObject) return "No object selected";
@@ -734,28 +825,108 @@ export function FunctionalPdfEditor() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{fileName}</p>
-              <p className="truncate text-xs text-muted-foreground">{pageCount ? `${pageCount} pages · local browser editing only` : "Upload a PDF to begin"}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {pageCount
+                  ? `${pageCount} pages · local browser editing only`
+                  : "Upload a PDF to begin"}
+              </p>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
-            <button className={`${iconButton} ${tool === "select" ? activeButton : ""}`} onClick={() => setTool("select")}><MousePointer2 className="size-4" />Select</button>
-            <label className={`${iconButton} relative overflow-hidden`}><Upload className="size-4" />Upload<input ref={fileInputRef} className={uploadInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} /></label>
-            <button className={iconButton} disabled={!isEditorReady} onClick={addText}><Type className="size-4" />Text</button>
-            <label className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}><ImagePlus className="size-4" />Image<input ref={imageInputRef} className={uploadInputClass} type="file" accept="image/*" disabled={!isEditorReady} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void addImageFromFile(file); }} /></label>
-            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}><Square className="size-4" />Rect</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}><Circle className="size-4" />Circle</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Select area</button>
-            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}><Highlighter className="size-4" />Highlight</button>
-            <button className={`${iconButton} ${tool === "pen" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("pen")}><PenLine className="size-4" />Pen</button>
-            <button className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`} disabled={!isEditorReady} onClick={() => setTool("eraser")}><Eraser className="size-4" />Erase</button>
+            <button
+              className={`${iconButton} ${tool === "select" ? activeButton : ""}`}
+              onClick={() => setTool("select")}
+            >
+              <MousePointer2 className="size-4" />
+              Select
+            </button>
+            <label className={`${iconButton} relative overflow-hidden`}>
+              <Upload className="size-4" />
+              Upload
+              <input
+                ref={fileInputRef}
+                className={uploadInputClass}
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePdfInputChange}
+              />
+            </label>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addText}>
+              <Type className="size-4" />
+              Text
+            </button>
+            <label
+              className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}
+            >
+              <ImagePlus className="size-4" />
+              Image
+              <input
+                ref={imageInputRef}
+                className={uploadInputClass}
+                type="file"
+                accept="image/*"
+                disabled={!isEditorReady}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void addImageFromFile(file);
+                }}
+              />
+            </label>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}>
+              <Square className="size-4" />
+              Rect
+            </button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}>
+              <Circle className="size-4" />
+              Circle
+            </button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}>
+              <Crop className="size-4" />
+              Select area
+            </button>
+            <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}>
+              <Highlighter className="size-4" />
+              Highlight
+            </button>
+            <button
+              className={`${iconButton} ${tool === "pen" ? activeButton : ""}`}
+              disabled={!isEditorReady}
+              onClick={() => setTool("pen")}
+            >
+              <PenLine className="size-4" />
+              Pen
+            </button>
+            <button
+              className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`}
+              disabled={!isEditorReady}
+              onClick={() => setTool("eraser")}
+            >
+              <Eraser className="size-4" />
+              Erase
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
-            <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo"><Undo2 className="size-4" /></button>
-            <button className={iconButton} onClick={() => applyHistory(1)} aria-label="Redo"><Redo2 className="size-4" /></button>
-            <button className={primaryActionButton} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Crop className="size-4" />Download area PNG</button>
-            <button className={primaryActionButton} onClick={exportPdf}><Download className="size-4" />Export PDF</button>
+            <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo">
+              <Undo2 className="size-4" />
+            </button>
+            <button className={iconButton} onClick={() => applyHistory(1)} aria-label="Redo">
+              <Redo2 className="size-4" />
+            </button>
+            <button
+              className={primaryActionButton}
+              disabled={!isEditorReady}
+              onClick={downloadSelectedAreaPng}
+            >
+              <Crop className="size-4" />
+              Download area PNG
+            </button>
+            <button className={primaryActionButton} onClick={exportPdf}>
+              <Download className="size-4" />
+              Export PDF
+            </button>
           </div>
         </div>
       </header>
@@ -764,18 +935,44 @@ export function FunctionalPdfEditor() {
         <aside className="hidden overflow-y-auto border-r border-border bg-panel p-3 lg:block">
           <label className="relative mb-3 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12">
             <Upload className="size-4" /> Upload PDF
-            <input className={uploadInputClass} type="file" accept="application/pdf,.pdf" onChange={handlePdfInputChange} />
+            <input
+              className={uploadInputClass}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={handlePdfInputChange}
+            />
           </label>
           <div className="mb-3 flex items-center gap-2">
-            <input className="min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Search text" value={searchText} onChange={(e) => setSearchText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && searchPdf()} />
-            <button className={iconButton} onClick={searchPdf}>Go</button>
+            <input
+              className="min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Search text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && searchPdf()}
+            />
+            <button className={iconButton} onClick={searchPdf}>
+              Go
+            </button>
           </div>
-          {matches.length > 0 && <p className="mb-3 text-xs text-muted-foreground">Matches: {matches.join(", ")}</p>}
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pages</p>
+          {matches.length > 0 && (
+            <p className="mb-3 text-xs text-muted-foreground">Matches: {matches.join(", ")}</p>
+          )}
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pages
+          </p>
           <div className="space-y-2">
             {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
-              <button key={page} className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${page === pageNumber ? "border-primary bg-primary/8" : "border-border bg-surface hover:border-primary/40"}`} onClick={() => { savePageState(); setPageNumber(page); }}>
-                <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-page text-xs font-bold shadow-soft">{page}</div>
+              <button
+                key={page}
+                className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${page === pageNumber ? "border-primary bg-primary/8" : "border-border bg-surface hover:border-primary/40"}`}
+                onClick={() => {
+                  savePageState();
+                  setPageNumber(page);
+                }}
+              >
+                <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-page text-xs font-bold shadow-soft">
+                  {page}
+                </div>
                 <span className="text-sm font-medium">Page {page}</span>
               </button>
             ))}
@@ -786,14 +983,35 @@ export function FunctionalPdfEditor() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
-              <input className="h-8 w-16 rounded-md border border-input bg-surface px-2 text-center outline-none focus:ring-2 focus:ring-ring" value={pageNumber} onChange={(e) => setPageNumber(Math.min(pageCount || 1, Math.max(1, Number(e.target.value) || 1)))} />
+              <input
+                className="h-8 w-16 rounded-md border border-input bg-surface px-2 text-center outline-none focus:ring-2 focus:ring-ring"
+                value={pageNumber}
+                onChange={(e) =>
+                  setPageNumber(Math.min(pageCount || 1, Math.max(1, Number(e.target.value) || 1)))
+                }
+              />
               <span className="text-muted-foreground">/ {pageCount || 1}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button className={iconButton} onClick={() => setZoom((z) => Math.max(0.35, Number((z - 0.1).toFixed(2))))}><ZoomOut className="size-4" /></button>
-              <span className="w-20 rounded-lg border border-border bg-panel px-3 py-2 text-center text-sm font-semibold shadow-soft">{Math.round(zoom * 100)}%</span>
-              <button className={iconButton} onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}><ZoomIn className="size-4" /></button>
-              <button className={iconButton} onClick={() => setZoom(1)}><RotateCw className="size-4" />Fit</button>
+              <button
+                className={iconButton}
+                onClick={() => setZoom((z) => Math.max(0.35, Number((z - 0.1).toFixed(2))))}
+              >
+                <ZoomOut className="size-4" />
+              </button>
+              <span className="w-20 rounded-lg border border-border bg-panel px-3 py-2 text-center text-sm font-semibold shadow-soft">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                className={iconButton}
+                onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}
+              >
+                <ZoomIn className="size-4" />
+              </button>
+              <button className={iconButton} onClick={() => setZoom(1)}>
+                <RotateCw className="size-4" />
+                Fit
+              </button>
             </div>
           </div>
 
@@ -817,69 +1035,162 @@ export function FunctionalPdfEditor() {
             <p className="text-sm font-semibold">Properties</p>
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
           </div>
-            <div className="space-y-5">
+          <div className="space-y-5">
             <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Crop export</span>
-              <button className={iconButton + " w-full"} disabled={!isEditorReady} onClick={addCropArea}><Crop className="size-4" />Select area</button>
-              <button className={primaryActionButton + " w-full"} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}><Download className="size-4" />Download selected area</button>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Crop export
+              </span>
+              <button
+                className={iconButton + " w-full"}
+                disabled={!isEditorReady}
+                onClick={addCropArea}
+              >
+                <Crop className="size-4" />
+                Select area
+              </button>
+              <button
+                className={primaryActionButton + " w-full"}
+                disabled={!isEditorReady}
+                onClick={downloadSelectedAreaPng}
+              >
+                <Download className="size-4" />
+                Download selected area
+              </button>
             </div>
             <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rectangle fill</span>
-                <input className="h-9 w-12 rounded-lg border border-border bg-panel p-1" type="color" value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"} onChange={(event) => setRectFillColor(event.target.value)} />
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Rectangle fill
+                </span>
+                <input
+                  className="h-9 w-12 rounded-lg border border-border bg-panel p-1"
+                  type="color"
+                  value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"}
+                  onChange={(event) => setRectFillColor(event.target.value)}
+                />
               </div>
               <div className="grid grid-cols-6 gap-2">
                 {MAIN_RECT_COLORS.map((color) => (
-                  <button key={color} className={`h-8 rounded-lg border ${rectFillColor === color ? "border-primary ring-2 ring-ring" : "border-border"}`} style={{ backgroundColor: color }} onClick={() => setRectFillColor(color)} aria-label={`Choose rectangle fill ${color}`} />
+                  <button
+                    key={color}
+                    className={`h-8 rounded-lg border ${rectFillColor === color ? "border-primary ring-2 ring-ring" : "border-border"}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setRectFillColor(color)}
+                    aria-label={`Choose rectangle fill ${color}`}
+                  />
                 ))}
               </div>
-              <button className={`${iconButton} w-full ${rectApplyAllPages ? activeButton : ""}`} type="button" onClick={() => setRectApplyAllPages((value) => !value)}>
+              <button
+                className={`${iconButton} w-full ${rectApplyAllPages ? activeButton : ""}`}
+                type="button"
+                onClick={() => setRectApplyAllPages((value) => !value)}
+              >
                 {rectApplyAllPages ? "All pages mode on" : "New rects: current page"}
               </button>
-              <button className={iconButton + " w-full"} type="button" disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1} onClick={applySelectedRectToAllPages}>
+              <button
+                className={iconButton + " w-full"}
+                type="button"
+                disabled={!selectedObject || selectedObject.type !== "rect" || pageCount <= 1}
+                onClick={applySelectedRectToAllPages}
+              >
                 Apply selected rect to all pages
               </button>
             </div>
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Placement</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Placement
+              </span>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   X
-                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.left ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("left", Number(event.target.value))} />
+                  <input
+                    className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    type="number"
+                    min="0"
+                    value={Math.round(selectedObject?.left ?? 0)}
+                    disabled={!selectedObject}
+                    onChange={(event) => setSelectedPosition("left", Number(event.target.value))}
+                  />
                 </label>
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   Y
-                  <input className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" min="0" value={Math.round(selectedObject?.top ?? 0)} disabled={!selectedObject} onChange={(event) => setSelectedPosition("top", Number(event.target.value))} />
+                  <input
+                    className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    type="number"
+                    min="0"
+                    value={Math.round(selectedObject?.top ?? 0)}
+                    disabled={!selectedObject}
+                    onChange={(event) => setSelectedPosition("top", Number(event.target.value))}
+                  />
                 </label>
               </div>
             </div>
             <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Font size</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Font size
+              </span>
               <div className="grid grid-cols-4 gap-2">
-                {[12, 20, 28, 48].map((size) => <button key={size} className={iconButton + " h-9 px-2"} disabled={!selectedObject || selectedObject.type !== "i-text"} onClick={() => setSelectedFontSize(size)}>{size}</button>)}
+                {[12, 20, 28, 48].map((size) => (
+                  <button
+                    key={size}
+                    className={iconButton + " h-9 px-2"}
+                    disabled={!selectedObject || selectedObject.type !== "i-text"}
+                    onClick={() => setSelectedFontSize(size)}
+                  >
+                    {size}
+                  </button>
+                ))}
               </div>
             </label>
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Color
+              </span>
               <div className="grid grid-cols-5 gap-2">
                 {MAIN_RECT_COLORS.map((color) => (
-                  <button key={color} className="h-8 rounded-lg border border-border" style={{ backgroundColor: color }} onClick={() => setSelectedColor(color)} aria-label={`Set color ${color}`} />
+                  <button
+                    key={color}
+                    className="h-8 rounded-lg border border-border"
+                    style={{ backgroundColor: color }}
+                    onClick={() => setSelectedColor(color)}
+                    aria-label={`Set color ${color}`}
+                  />
                 ))}
               </div>
             </div>
-            <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-3 text-sm font-semibold text-destructive-foreground shadow-soft transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-45" disabled={!selectedObject} onClick={deleteSelected}>
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-3 text-sm font-semibold text-destructive-foreground shadow-soft transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-45"
+              disabled={!selectedObject}
+              onClick={deleteSelected}
+            >
               <Trash2 className="size-4" /> Delete selected
             </button>
-            <button className={iconButton + " w-full"} onClick={clearObjects}>Clear page overlay</button>
+            <button className={iconButton + " w-full"} onClick={clearObjects}>
+              Clear page overlay
+            </button>
             {pngPreviewUrl && (
               <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PNG preview</span>
-                <img className="max-h-40 w-full rounded-lg border border-border object-contain" src={pngPreviewUrl} alt="Downloaded selected area preview" />
-                <a className={iconButton + " w-full"} href={pngPreviewUrl} download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}>Download again</a>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  PNG preview
+                </span>
+                <img
+                  className="max-h-40 w-full rounded-lg border border-border object-contain"
+                  src={pngPreviewUrl}
+                  alt="Downloaded selected area preview"
+                />
+                <a
+                  className={iconButton + " w-full"}
+                  href={pngPreviewUrl}
+                  download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}
+                >
+                  Download again
+                </a>
               </div>
             )}
             <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted-foreground">
-              Everything runs locally in your browser. Double-click text to edit overlay text, drag objects to move, use handles to resize/rotate, and export to flatten edits into a new PDF.
+              Everything runs locally in your browser. Double-click text to edit overlay text, drag
+              objects to move, use handles to resize/rotate, and export to flatten edits into a new
+              PDF.
             </div>
           </div>
         </aside>
