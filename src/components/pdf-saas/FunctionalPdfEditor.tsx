@@ -82,6 +82,20 @@ function renderWithTimeout(task: RenderTask) {
   });
 }
 
+function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) {
+  const left = Math.max(0, cropArea.left ?? 0);
+  const top = Math.max(0, cropArea.top ?? 0);
+  const width = Math.min(canvas.getWidth() - left, (cropArea.width ?? 0) * (cropArea.scaleX ?? 1));
+  const height = Math.min(canvas.getHeight() - top, (cropArea.height ?? 0) * (cropArea.scaleY ?? 1));
+
+  return {
+    left: Math.round(left),
+    top: Math.round(top),
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+  };
+}
+
 const iconButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
@@ -535,6 +549,20 @@ export function FunctionalPdfEditor() {
     canvas.requestRenderAll();
     setSelectedObject(null);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      if (isTyping || (event.key !== "Delete" && event.key !== "Backspace")) return;
+      if (!fabricRef.current?.getActiveObjects().length) return;
+      event.preventDefault();
+      deleteSelected();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteSelected]);
 
   const clearObjects = useCallback(() => {
     const canvas = fabricRef.current;
