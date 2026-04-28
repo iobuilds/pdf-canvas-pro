@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PdfEditorShell } from "@/components/pdf-saas/PdfEditorShell";
+import { FunctionalPdfEditor } from "@/components/pdf-saas/FunctionalPdfEditor";
 
 export const Route = createFileRoute("/editor")({
   head: () => ({
     meta: [
-      { title: "PDF Editor — DocuForge" },
-      { name: "description", content: "Edit, annotate, sign, and export PDFs in a browser workspace." },
-      { property: "og:title", content: "PDF Editor — DocuForge" },
-      { property: "og:description", content: "A responsive Acrobat-style PDF editor interface." },
+      { title: "Functional PDF Editor — DocuForge" },
+      { name: "description", content: "Upload PDFs, render pages with PDF.js, and edit with a fabric.js overlay." },
+      { property: "og:title", content: "Functional PDF Editor — DocuForge" },
+      { property: "og:description", content: "A working browser PDF editor with upload, zoom, selection, drag, resize, annotations, and export." },
     ],
   }),
-  component: PdfEditorShell,
+  component: FunctionalPdfEditor,
 });
