@@ -688,6 +688,8 @@ export function FunctionalPdfEditor() {
         return;
       }
 
+      if (!overlayHostRef.current?.contains(document.activeElement)) return;
+
       const arrowMove: Record<string, [number, number]> = {
         ArrowUp: [0, -1],
         ArrowDown: [0, 1],
@@ -698,6 +700,7 @@ export function FunctionalPdfEditor() {
       if (!direction) return;
 
       event.preventDefault();
+      event.stopPropagation();
       const step = event.shiftKey ? 10 : 1;
       activeObjects.forEach((object) => {
         object.set({
