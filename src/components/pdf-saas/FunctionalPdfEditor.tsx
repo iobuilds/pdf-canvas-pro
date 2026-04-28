@@ -287,7 +287,9 @@ export function FunctionalPdfEditor() {
     for (let pageIndex = 1; pageIndex <= doc.numPages; pageIndex += 1) {
       if (thumbnailJobRef.current !== jobId) return;
       try {
-        await new Promise<void>((resolve) => window.setTimeout(resolve, pageIndex === 1 ? 100 : 20));
+        await new Promise<void>((resolve) =>
+          window.setTimeout(resolve, pageIndex === 1 ? 100 : 20),
+        );
         const page = await doc.getPage(pageIndex);
         const viewport = page.getViewport({ scale: 1 });
         const scale = Math.min(88 / viewport.width, 112 / viewport.height);
@@ -318,7 +320,11 @@ export function FunctionalPdfEditor() {
 
   useEffect(() => {
     if (!pdfDoc || !pageCount) return;
-    if (Array.from({ length: pageCount }, (_, index) => index + 1).every((page) => pageStatesRef.current[page]?.thumbnail)) {
+    if (
+      Array.from({ length: pageCount }, (_, index) => index + 1).every(
+        (page) => pageStatesRef.current[page]?.thumbnail,
+      )
+    ) {
       return;
     }
     void generatePageThumbnails(pdfDoc);
