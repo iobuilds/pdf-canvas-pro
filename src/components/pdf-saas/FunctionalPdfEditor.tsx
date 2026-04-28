@@ -216,6 +216,7 @@ export function FunctionalPdfEditor() {
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
   const [manualFontFamily, setManualFontFamily] = useState("");
+  const [eraserSize, setEraserSize] = useState(18);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -439,7 +440,7 @@ export function FunctionalPdfEditor() {
       nextFabric.backgroundColor = "transparent";
       nextFabric.freeDrawingBrush = new fabric.PencilBrush(nextFabric);
       nextFabric.freeDrawingBrush.color = "#2563eb";
-      nextFabric.freeDrawingBrush.width = 3;
+      nextFabric.freeDrawingBrush.width = currentTool === "eraser" ? eraserSize : 3;
       const currentTool = toolRef.current;
       nextFabric.isDrawingMode = currentTool === "pen" || currentTool === "eraser";
       const fabricWrapper = nextFabric.wrapperEl;
@@ -452,7 +453,7 @@ export function FunctionalPdfEditor() {
       nextFabric.upperCanvasEl.style.position = "absolute";
       if (currentTool === "eraser") {
         nextFabric.freeDrawingBrush.color = "#ffffff";
-        nextFabric.freeDrawingBrush.width = 18;
+        nextFabric.freeDrawingBrush.width = eraserSize;
       }
 
       fabricRef.current = nextFabric;
@@ -497,7 +498,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfDoc, pageNumber, pushHistory, zoom]);
+  }, [eraserSize, pdfDoc, pageNumber, pushHistory, zoom]);
 
   const loadPdf = useCallback(
     async (source: ArrayBuffer, name: string) => {
@@ -555,10 +556,10 @@ export function FunctionalPdfEditor() {
     });
     if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = tool === "eraser" ? "#ffffff" : "#2563eb";
-      canvas.freeDrawingBrush.width = tool === "eraser" ? 18 : 3;
+      canvas.freeDrawingBrush.width = tool === "eraser" ? eraserSize : 3;
     }
     canvas.requestRenderAll();
-  }, [tool]);
+  }, [eraserSize, tool]);
 
   const validateAndLoadFile = useCallback(
     async (file: File) => {
