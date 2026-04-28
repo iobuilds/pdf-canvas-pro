@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as fabric from "fabric";
 import {
+  Bold,
   Circle,
   Crop,
   Download,
@@ -17,6 +18,7 @@ import {
   Square,
   Trash2,
   Type,
+  Underline,
   Undo2,
   Upload,
   ZoomIn,
@@ -47,6 +49,16 @@ const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const PDF_RENDER_TIMEOUT_MS = 7000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
+const SYSTEM_FONTS = [
+  "Arial",
+  "Helvetica",
+  "Times New Roman",
+  "Georgia",
+  "Verdana",
+  "Tahoma",
+  "Trebuchet MS",
+  "Courier New",
+];
 const CROP_AREA_NAME = "export-crop-area";
 
 function readFileAsArrayBuffer(file: File) {
@@ -133,6 +145,7 @@ export function FunctionalPdfEditor() {
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
+  const [, setSelectionVersion] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [matches, setMatches] = useState<number[]>([]);
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
@@ -421,7 +434,9 @@ export function FunctionalPdfEditor() {
       top: 140,
       fill: "#111827",
       fontSize: 28,
-      fontFamily: "Inter, Arial",
+      fontFamily: "Arial",
+      fontWeight: "normal",
+      underline: false,
       padding: 8,
       cornerStyle: "circle",
       borderColor: "#2563eb",
@@ -603,15 +618,48 @@ export function FunctionalPdfEditor() {
       const target = event.target as HTMLElement | null;
       const isTyping =
         target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
-      if (isTyping || (event.key !== "Delete" && event.key !== "Backspace")) return;
-      if (!fabricRef.current?.getActiveObjects().length) return;
+      if (isTyping) return;
+
+      const canvas = fabricRef.current;
+      const activeObjects = canvas?.getActiveObjects() ?? [];
+      if (!canvas || !activeObjects.length) return;
+
+      const activeText = canvas.getActiveObject();
+      if (activeText?.type === "i-text" && (activeText as fabric.IText).isEditing) return;
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        deleteSelected();
+        return;
+      }
+
+      const arrowMove: Record<string, [number, number]> = {
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+      };
+      const direction = arrowMove[event.key];
+      if (!direction) return;
+
       event.preventDefault();
-      deleteSelected();
+      const step = event.shiftKey ? 10 : 1;
+      activeObjects.forEach((object) => {
+        object.set({
+          left: Math.max(0, (object.left ?? 0) + direction[0] * step),
+          top: Math.max(0, (object.top ?? 0) + direction[1] * step),
+        });
+        object.setCoords();
+      });
+      canvas.requestRenderAll();
+      setSelectedObject(canvas.getActiveObject() ?? activeObjects[0] ?? null);
+      setSelectionVersion((value) => value + 1);
+      pushHistory();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelected]);
+  }, [deleteSelected, pushHistory]);
 
   const clearObjects = useCallback(() => {
     const canvas = fabricRef.current;
@@ -783,6 +831,41 @@ export function FunctionalPdfEditor() {
       if (!canvas || !active || active.type !== "i-text") return;
       (active as fabric.IText).set("fontSize", fontSize);
       canvas.requestRenderAll();
+      setSelectedObject(active);
+      setSelectionVersion((value) => value + 1);
+      pushHistory();
+    },
+    [pushHistory],
+  );
+
+  const setSelectedFontFamily = useCallback(
+    (fontFamily: string) => {
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (!canvas || !active || active.type !== "i-text") return;
+      (active as fabric.IText).set("fontFamily", fontFamily);
+      canvas.requestRenderAll();
+      setSelectedObject(active);
+      setSelectionVersion((value) => value + 1);
+      pushHistory();
+    },
+    [pushHistory],
+  );
+
+  const toggleSelectedTextStyle = useCallback(
+    (style: "bold" | "underline") => {
+      const canvas = fabricRef.current;
+      const active = canvas?.getActiveObject();
+      if (!canvas || !active || active.type !== "i-text") return;
+      const text = active as fabric.IText;
+      if (style === "bold") {
+        text.set("fontWeight", text.fontWeight === "bold" ? "normal" : "bold");
+      } else {
+        text.set("underline", !text.underline);
+      }
+      canvas.requestRenderAll();
+      setSelectedObject(active);
+      setSelectionVersion((value) => value + 1);
       pushHistory();
     },
     [pushHistory],
@@ -796,6 +879,7 @@ export function FunctionalPdfEditor() {
       active.set(axis, Math.max(0, value));
       active.setCoords();
       setSelectedObject(active);
+      setSelectionVersion((value) => value + 1);
       canvas.requestRenderAll();
       pushHistory();
     },
@@ -806,6 +890,8 @@ export function FunctionalPdfEditor() {
     if (!selectedObject) return "No object selected";
     return `${selectedObject.type} · X ${Math.round(selectedObject.left ?? 0)} · Y ${Math.round(selectedObject.top ?? 0)}`;
   }, [selectedObject]);
+
+  const selectedText = selectedObject?.type === "i-text" ? (selectedObject as fabric.IText) : null;
 
   return (
     <main
@@ -1125,23 +1211,68 @@ export function FunctionalPdfEditor() {
                 </label>
               </div>
             </div>
-            <label className="block space-y-2">
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Font size
+                Text options
               </span>
+              <label className="block space-y-1 text-xs font-medium text-muted-foreground">
+                System font
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  disabled={!selectedText}
+                  value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
+                  onChange={(event) => setSelectedFontFamily(event.target.value)}
+                >
+                  {SYSTEM_FONTS.map((font) => (
+                    <option key={font} value={font}>
+                      {font}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                  Size
+                  <input
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    type="number"
+                    min="6"
+                    max="160"
+                    disabled={!selectedText}
+                    value={Math.round(Number(selectedText?.fontSize ?? 28))}
+                    onChange={(event) => setSelectedFontSize(Number(event.target.value) || 28)}
+                  />
+                </label>
+                <button
+                  className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.fontWeight === "bold" ? activeButton : ""}`}
+                  disabled={!selectedText}
+                  onClick={() => toggleSelectedTextStyle("bold")}
+                  aria-label="Toggle bold"
+                >
+                  <Bold className="size-4" />
+                </button>
+                <button
+                  className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.underline ? activeButton : ""}`}
+                  disabled={!selectedText}
+                  onClick={() => toggleSelectedTextStyle("underline")}
+                  aria-label="Toggle underline"
+                >
+                  <Underline className="size-4" />
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 {[12, 20, 28, 48].map((size) => (
                   <button
                     key={size}
                     className={iconButton + " h-9 px-2"}
-                    disabled={!selectedObject || selectedObject.type !== "i-text"}
+                    disabled={!selectedText}
                     onClick={() => setSelectedFontSize(size)}
                   >
                     {size}
                   </button>
                 ))}
               </div>
-            </label>
+            </div>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Color
