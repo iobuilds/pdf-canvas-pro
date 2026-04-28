@@ -439,9 +439,9 @@ export function FunctionalPdfEditor() {
       });
       nextFabric.backgroundColor = "transparent";
       nextFabric.freeDrawingBrush = new fabric.PencilBrush(nextFabric);
+      const currentTool = toolRef.current;
       nextFabric.freeDrawingBrush.color = "#2563eb";
       nextFabric.freeDrawingBrush.width = currentTool === "eraser" ? eraserSize : 3;
-      const currentTool = toolRef.current;
       nextFabric.isDrawingMode = currentTool === "pen" || currentTool === "eraser";
       const fabricWrapper = nextFabric.wrapperEl;
       fabricWrapper.style.position = "absolute";
