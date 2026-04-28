@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as fabric from "fabric";
 import {
-  ArrowLeft,
   Circle,
   Download,
   Eraser,
@@ -512,15 +511,12 @@ export function FunctionalPdfEditor() {
       <header className="sticky top-0 z-30 border-b border-border bg-panel/95 shadow-soft backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-3 px-3 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="/" className="hidden rounded-lg border border-border bg-surface p-2 transition hover:bg-accent md:inline-flex" aria-label="Back home">
-              <ArrowLeft className="size-4" />
-            </a>
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-blue">
               <FileText className="size-5" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{fileName}</p>
-              <p className="truncate text-xs text-muted-foreground">{pageCount ? `${pageCount} pages · fabric overlay active` : "Upload a PDF to begin"}</p>
+              <p className="truncate text-xs text-muted-foreground">{pageCount ? `${pageCount} pages · local browser editing only` : "Upload a PDF to begin"}</p>
             </div>
           </div>
 
@@ -620,7 +616,7 @@ export function FunctionalPdfEditor() {
             </button>
             <button className={iconButton + " w-full"} onClick={clearObjects}>Clear page overlay</button>
             <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted-foreground">
-              Double-click text to edit it. Drag objects to move; use corner handles to resize/rotate. Export flattens the overlay into the PDF.
+              Everything runs locally in your browser. Double-click text to edit overlay text, drag objects to move, use handles to resize/rotate, and export to flatten edits into a new PDF.
             </div>
           </div>
         </aside>
