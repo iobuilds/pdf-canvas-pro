@@ -46,6 +46,7 @@ type FabricJson = {
 const SAMPLE_PDF_URL = "/2025_PHY_02.pdf";
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
+const PDF_RENDER_TIMEOUT_MS = 7000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const CROP_AREA_NAME = "export-crop-area";
 
@@ -76,6 +77,16 @@ async function urlToArrayBuffer(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error("Could not load the sample PDF.");
   return response.arrayBuffer();
+}
+
+function renderWithTimeout(task: RenderTask) {
+  let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timeoutId = window.setTimeout(() => resolve("timeout"), PDF_RENDER_TIMEOUT_MS);
+  });
+  return Promise.race([task.promise.then(() => "done" as const), timeout]).finally(() => {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  });
 }
 
 const iconButton =
