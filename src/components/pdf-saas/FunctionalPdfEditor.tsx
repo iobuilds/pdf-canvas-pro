@@ -115,6 +115,7 @@ export function FunctionalPdfEditor() {
   const [matches, setMatches] = useState<number[]>([]);
   const [rectFillColor, setRectFillColor] = useState("rgba(37, 99, 235, 0.18)");
   const [rectApplyAllPages, setRectApplyAllPages] = useState(false);
+  const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -123,6 +124,10 @@ export function FunctionalPdfEditor() {
   useEffect(() => {
     pageStatesRef.current = pageStates;
   }, [pageStates]);
+
+  useEffect(() => () => {
+    if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
+  }, [pngPreviewUrl]);
 
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
