@@ -4,6 +4,8 @@ import * as fabric from "fabric";
 import {
   Bold,
   Circle,
+  ClipboardPaste,
+  Copy,
   Crop,
   Download,
   Eraser,
@@ -15,6 +17,7 @@ import {
   PenLine,
   Redo2,
   RotateCw,
+  Scissors,
   Square,
   Trash2,
   Type,
