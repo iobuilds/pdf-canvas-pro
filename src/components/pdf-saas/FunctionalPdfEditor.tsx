@@ -1205,8 +1205,8 @@ export function FunctionalPdfEditor() {
         </div>
       </header>
 
-      <section className="grid h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
-        <aside className="hidden overflow-y-auto border-r border-border bg-panel p-3 lg:block">
+      <section className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
+        <aside className="order-2 max-h-56 overflow-y-auto border-t border-border bg-panel p-3 lg:order-none lg:block lg:max-h-none lg:border-r lg:border-t-0">
           <label className="relative mb-3 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12">
             <Upload className="size-4" /> Upload PDF
             <input
@@ -1262,7 +1262,7 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div ref={workspaceRef} className="relative flex min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6">
+        <div ref={workspaceRef} className="relative order-1 flex min-h-[60vh] min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6 lg:order-none lg:min-h-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1302,7 +1302,7 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="grid min-h-[calc(100%-4.5rem)] min-w-max flex-1 place-items-center py-6">
+          <div className="grid min-h-[calc(100%-4.5rem)] min-w-max flex-1 place-items-center py-4 md:py-6">
             <div className="w-fit animate-editor-enter rounded-sm shadow-page">
               <div className="relative bg-page">
                 <canvas ref={pdfCanvasRef} className="block" />
@@ -1319,7 +1319,7 @@ export function FunctionalPdfEditor() {
           </div>
         </div>
 
-        <aside className="hidden overflow-y-auto border-l border-border bg-panel p-4 lg:block">
+        <aside className="order-3 overflow-y-auto border-t border-border bg-panel p-3 sm:p-4 lg:order-none lg:block lg:border-l lg:border-t-0">
           <div className="mb-5">
             <p className="text-sm font-semibold">Properties</p>
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
