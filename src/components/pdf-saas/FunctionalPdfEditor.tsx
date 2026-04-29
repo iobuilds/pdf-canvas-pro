@@ -879,6 +879,24 @@ export function FunctionalPdfEditor() {
         return;
       }
 
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
+        event.preventDefault();
+        copySelectedPdfArea(false);
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "x") {
+        event.preventDefault();
+        copySelectedPdfArea(true);
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
+        event.preventDefault();
+        void pastePdfArea();
+        return;
+      }
+
       const arrowMove: Record<string, [number, number]> = {
         ArrowUp: [0, -1],
         ArrowDown: [0, 1],
@@ -906,7 +924,7 @@ export function FunctionalPdfEditor() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelected, pageCount, pushHistory, savePageState]);
+  }, [copySelectedPdfArea, deleteSelected, pageCount, pastePdfArea, pushHistory, savePageState]);
 
   const clearObjects = useCallback(() => {
     const canvas = fabricRef.current;
