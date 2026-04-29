@@ -340,7 +340,7 @@ export function FunctionalPdfEditor() {
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const json = canvas.toJSON();
+    const json = createPersistentCanvasJson(canvas);
     const nextState = {
       ...pageStatesRef.current,
       [pageNumber]: {
@@ -357,7 +357,7 @@ export function FunctionalPdfEditor() {
   const pushHistory = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas || skipHistoryRef.current) return;
-    const next = JSON.stringify(canvas.toJSON());
+    const next = JSON.stringify(createPersistentCanvasJson(canvas));
     const stack = historyRef.current[pageNumber] ?? [];
     const currentIndex = historyIndexRef.current[pageNumber] ?? -1;
     const trimmed = stack.slice(0, currentIndex + 1);
@@ -559,7 +559,7 @@ export function FunctionalPdfEditor() {
         nextFabric.requestRenderAll();
         skipHistoryRef.current = false;
       } else if (!historyRef.current[pageNumber]) {
-        const initial = JSON.stringify(nextFabric.toJSON());
+        const initial = JSON.stringify(createPersistentCanvasJson(nextFabric));
         historyRef.current[pageNumber] = [initial];
         historyIndexRef.current[pageNumber] = 0;
       }
