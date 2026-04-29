@@ -245,6 +245,7 @@ export function FunctionalPdfEditor() {
   const [manualFontFamily, setManualFontFamily] = useState("");
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
+  const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
 
   useEffect(() => {
     toolRef.current = tool;
