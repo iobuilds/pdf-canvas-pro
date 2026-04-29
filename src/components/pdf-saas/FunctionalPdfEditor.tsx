@@ -1498,20 +1498,20 @@ export function FunctionalPdfEditor() {
         </div>
 
         <aside className="order-3 overflow-y-auto border-t border-border bg-panel p-3 sm:p-4 lg:order-none lg:block lg:border-l lg:border-t-0">
-          <div className="mb-5">
-            <p className="text-sm font-semibold">Properties</p>
-            <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
+          <div className="sticky top-0 z-10 -mx-3 -mt-3 border-b border-border bg-panel/95 px-3 py-3 backdrop-blur sm:-mx-4 sm:-mt-4 sm:px-4">
+            <p className="text-sm font-semibold">Tool panel</p>
+            <p className="mt-1 truncate text-xs text-muted-foreground">{selectedDescription}</p>
           </div>
-          <div className="space-y-5">
-            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Crop export
-              </span>
-              <button
-                className={iconButton + " w-full"}
-                disabled={!isEditorReady}
-                onClick={addCropArea}
-              >
+
+          <div className="mt-4 space-y-3">
+            <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Area tools
+                </span>
+                <Crop className="size-4 text-muted-foreground" />
+              </div>
+              <button className={iconButton + " w-full justify-center"} disabled={!isEditorReady} onClick={addCropArea}>
                 <Crop className="size-4" />
                 Select area
               </button>
@@ -1544,58 +1544,21 @@ export function FunctionalPdfEditor() {
                   <span className="hidden sm:inline">Paste</span>
                 </button>
               </div>
-              <button
-                className={primaryActionButton + " w-full"}
-                disabled={!isEditorReady}
-                onClick={downloadSelectedAreaPng}
-              >
+              <button className={primaryActionButton + " w-full justify-center"} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}>
                 <Download className="size-4" />
                 Download selected area
               </button>
-            </div>
-            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Rectangle fill
-                </span>
-                <input
-                  className="h-9 w-12 rounded-lg border border-border bg-panel p-1"
-                  type="color"
-                  value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"}
-                  onChange={(event) => setRectFillColor(event.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-6 gap-2">
-                {MAIN_RECT_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    className={`h-8 rounded-lg border ${rectFillColor === color ? "border-primary ring-2 ring-ring" : "border-border"}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setRectFillColor(color)}
-                    aria-label={`Choose rectangle fill ${color}`}
-                  />
-                ))}
-              </div>
-              <button
-                className={iconButton + " w-full"}
-                type="button"
-                disabled={
-                  !selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1
-                }
-                onClick={applySelectedObjectToAllPages}
-              >
-                Apply selected element to all pages
-              </button>
-            </div>
-            <div className="space-y-2">
+            </section>
+
+            <section className="space-y-4 rounded-xl border border-border bg-surface p-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Placement
+                Selected element
               </span>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   X
                   <input
-                    className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     type="number"
                     min="0"
                     value={Math.round(selectedObject?.left ?? 0)}
@@ -1606,7 +1569,7 @@ export function FunctionalPdfEditor() {
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   Y
                   <input
-                    className="h-9 w-full rounded-md border border-input bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     type="number"
                     min="0"
                     value={Math.round(selectedObject?.top ?? 0)}
@@ -1615,9 +1578,59 @@ export function FunctionalPdfEditor() {
                   />
                 </label>
               </div>
-            </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Fill color
+                  </span>
+                  <input
+                    className="h-9 w-12 rounded-lg border border-border bg-panel p-1"
+                    type="color"
+                    value={rectFillColor.startsWith("#") ? rectFillColor : "#2563eb"}
+                    onChange={(event) => setRectFillColor(event.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-6 gap-2">
+                  {MAIN_RECT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      className={`h-8 rounded-lg border ${rectFillColor === color ? "border-primary ring-2 ring-ring" : "border-border"}`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        setRectFillColor(color);
+                        setSelectedColor(color);
+                      }}
+                      aria-label={`Choose color ${color}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                className={iconButton + " w-full justify-center"}
+                type="button"
+                disabled={!selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1}
+                onClick={applySelectedObjectToAllPages}
+              >
+                Apply selected element to all pages
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-destructive px-3 text-sm font-semibold text-destructive-foreground shadow-soft transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-45"
+                  disabled={!selectedObject}
+                  onClick={deleteSelected}
+                >
+                  <Trash2 className="size-4" /> Delete
+                </button>
+                <button className={iconButton + " w-full justify-center"} onClick={clearObjects}>
+                  Clear page
+                </button>
+              </div>
+            </section>
+
             {tool === "eraser" && (
-              <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Eraser
                 </span>
@@ -1632,39 +1645,34 @@ export function FunctionalPdfEditor() {
                     onChange={(event) => setEraserSize(Number(event.target.value))}
                   />
                 </label>
-              </div>
+              </section>
             )}
-            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+
+            <details className="rounded-xl border border-border bg-surface p-3" open>
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Text options
-              </span>
-              <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-                <span className="flex items-center justify-between gap-2">
-                  System font
-                  <button
-                    className="text-xs font-semibold text-primary"
-                    type="button"
-                    onClick={loadSystemFonts}
+              </summary>
+              <div className="mt-3 space-y-3">
+                <label className="block space-y-1 text-xs font-medium text-muted-foreground">
+                  <span className="flex items-center justify-between gap-2">
+                    System font
+                    <button className="text-xs font-semibold text-primary" type="button" onClick={loadSystemFonts}>
+                      Load all
+                    </button>
+                  </span>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!selectedText}
+                    value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
+                    onChange={(event) => setSelectedFontFamily(event.target.value)}
                   >
-                    Load all
-                  </button>
-                </span>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                  disabled={!selectedText}
-                  value={
-                    selectedText?.fontFamily
-                      ? String(selectedText.fontFamily).split(",")[0]
-                      : "Arial"
-                  }
-                  onChange={(event) => setSelectedFontFamily(event.target.value)}
-                >
-                  {availableFonts.map((font) => (
-                    <option key={font} value={font} style={{ fontFamily: font }}>
-                      {font}
-                    </option>
-                  ))}
-                </select>
+                    {availableFonts.map((font) => (
+                      <option key={font} value={font} style={{ fontFamily: font }}>
+                        {font}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="flex gap-2">
                   <input
                     className="h-9 min-w-0 flex-1 rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
@@ -1673,9 +1681,7 @@ export function FunctionalPdfEditor() {
                     value={manualFontFamily}
                     onChange={(event) => setManualFontFamily(event.target.value)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter" && manualFontFamily.trim()) {
-                        setSelectedFontFamily(manualFontFamily.trim());
-                      }
+                      if (event.key === "Enter" && manualFontFamily.trim()) setSelectedFontFamily(manualFontFamily.trim());
                     }}
                   />
                   <button
@@ -1687,121 +1693,79 @@ export function FunctionalPdfEditor() {
                     Use
                   </button>
                 </div>
-              </label>
-              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
-                <label className="space-y-1 text-xs font-medium text-muted-foreground">
-                  Size
-                  <input
-                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                    type="number"
-                    min="6"
-                    max="160"
-                    disabled={!selectedText}
-                    value={Math.round(Number(selectedText?.fontSize ?? 28))}
-                    onChange={(event) => setSelectedFontSize(Number(event.target.value) || 28)}
-                  />
-                </label>
-                <button
-                  className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.fontWeight === "bold" ? activeButton : ""}`}
-                  disabled={!selectedText}
-                  onClick={() => toggleSelectedTextStyle("bold")}
-                  aria-label="Toggle bold"
-                >
-                  <Bold className="size-4" />
-                </button>
-                <button
-                  className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.underline ? activeButton : ""}`}
-                  disabled={!selectedText}
-                  onClick={() => toggleSelectedTextStyle("underline")}
-                  aria-label="Toggle underline"
-                >
-                  <Underline className="size-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {[12, 20, 28, 48].map((size) => (
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                  <label className="space-y-1 text-xs font-medium text-muted-foreground">
+                    Size
+                    <input
+                      className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                      type="number"
+                      min="6"
+                      max="160"
+                      disabled={!selectedText}
+                      value={Math.round(Number(selectedText?.fontSize ?? 28))}
+                      onChange={(event) => setSelectedFontSize(Number(event.target.value) || 28)}
+                    />
+                  </label>
                   <button
-                    key={size}
-                    className={iconButton + " h-9 px-2"}
+                    className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.fontWeight === "bold" ? activeButton : ""}`}
                     disabled={!selectedText}
-                    onClick={() => setSelectedFontSize(size)}
+                    onClick={() => toggleSelectedTextStyle("bold")}
+                    aria-label="Toggle bold"
                   >
-                    {size}
+                    <Bold className="size-4" />
                   </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  PDF metadata
-                </span>
-                <button className="text-xs font-semibold text-primary" type="button" onClick={clearPdfMetadata}>
-                  Clear all
-                </button>
-              </div>
-              {Object.entries(pdfMetadata).map(([field, value]) => (
-                <label key={field} className="block space-y-1 text-xs font-medium capitalize text-muted-foreground">
-                  {field}
-                  <input
-                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                    value={value}
-                    disabled={!pdfDoc}
-                    onChange={(event) => updatePdfMetadata(field as keyof PdfMetadata, event.target.value)}
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Color
-              </span>
-              <div className="grid grid-cols-5 gap-2">
-                {MAIN_RECT_COLORS.map((color) => (
                   <button
-                    key={color}
-                    className="h-8 rounded-lg border border-border"
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                    aria-label={`Set color ${color}`}
-                  />
+                    className={`${iconButton} mt-5 h-9 px-3 ${selectedText?.underline ? activeButton : ""}`}
+                    disabled={!selectedText}
+                    onClick={() => toggleSelectedTextStyle("underline")}
+                    aria-label="Toggle underline"
+                  >
+                    <Underline className="size-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[12, 20, 28, 48].map((size) => (
+                    <button key={size} className={iconButton + " h-9 px-2"} disabled={!selectedText} onClick={() => setSelectedFontSize(size)}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
+
+            <details className="rounded-xl border border-border bg-surface p-3">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                PDF metadata
+              </summary>
+              <div className="mt-3 space-y-3">
+                <button className={iconButton + " w-full justify-center"} type="button" onClick={clearPdfMetadata} disabled={!pdfDoc}>
+                  Clear all metadata
+                </button>
+                {Object.entries(pdfMetadata).map(([field, value]) => (
+                  <label key={field} className="block space-y-1 text-xs font-medium capitalize text-muted-foreground">
+                    {field}
+                    <input
+                      className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                      value={value}
+                      disabled={!pdfDoc}
+                      onChange={(event) => updatePdfMetadata(field as keyof PdfMetadata, event.target.value)}
+                    />
+                  </label>
                 ))}
               </div>
-            </div>
-            <button
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-3 text-sm font-semibold text-destructive-foreground shadow-soft transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-45"
-              disabled={!selectedObject}
-              onClick={deleteSelected}
-            >
-              <Trash2 className="size-4" /> Delete selected
-            </button>
-            <button className={iconButton + " w-full"} onClick={clearObjects}>
-              Clear page overlay
-            </button>
+            </details>
+
             {pngPreviewUrl && (
-              <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
+              <section className="space-y-2 rounded-xl border border-border bg-surface p-3">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   PNG preview
                 </span>
-                <img
-                  className="max-h-40 w-full rounded-lg border border-border object-contain"
-                  src={pngPreviewUrl}
-                  alt="Downloaded selected area preview"
-                />
-                <a
-                  className={iconButton + " w-full"}
-                  href={pngPreviewUrl}
-                  download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}
-                >
+                <img className="max-h-40 w-full rounded-lg border border-border object-contain" src={pngPreviewUrl} alt="Downloaded selected area preview" />
+                <a className={iconButton + " w-full justify-center"} href={pngPreviewUrl} download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}>
                   Download again
                 </a>
-              </div>
+              </section>
             )}
-            <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted-foreground">
-              Everything runs locally in your browser. Double-click text to edit overlay text, drag
-              objects to move, use handles to resize/rotate, and export to flatten edits into a new
-              PDF.
-            </div>
           </div>
         </aside>
       </section>
