@@ -73,6 +73,9 @@ const PDF_RENDER_TIMEOUT_MS = 7000;
 const AREA_CLIPBOARD_MAX_DIMENSION = 8192;
 const AREA_CLIPBOARD_MAX_PIXELS = 16_000_000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
+const AREA_SELECTION_FILL = "rgba(17, 24, 39, 0.03)";
+const AREA_SELECTION_STROKE = "rgba(17, 24, 39, 0.82)";
+const AREA_SELECTION_HANDLE = "rgba(17, 24, 39, 0.68)";
 const SYSTEM_FONTS = [
   "Arial",
   "Arial Black",
@@ -160,6 +163,16 @@ function readFileAsDataUrl(file: File) {
 function asFabricJson(json: unknown): FabricJson {
   if (json && typeof json === "object") return json as FabricJson;
   return { version: "6.0.0", objects: [] };
+}
+
+function createPersistentCanvasJson(canvas: fabric.StaticCanvas | FabricCanvas) {
+  const activeObject = "getActiveObject" in canvas ? canvas.getActiveObject() : null;
+  const cropAreas = canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME);
+  cropAreas.forEach((object) => canvas.remove(object));
+  const json = canvas.toJSON();
+  cropAreas.forEach((object) => canvas.add(object));
+  if (activeObject && "setActiveObject" in canvas) canvas.setActiveObject(activeObject);
+  return json;
 }
 
 function renderWithTimeout(task: RenderTask) {
@@ -327,7 +340,7 @@ export function FunctionalPdfEditor() {
   const savePageState = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const json = canvas.toJSON();
+    const json = createPersistentCanvasJson(canvas);
     const nextState = {
       ...pageStatesRef.current,
       [pageNumber]: {
@@ -344,7 +357,7 @@ export function FunctionalPdfEditor() {
   const pushHistory = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas || skipHistoryRef.current) return;
-    const next = JSON.stringify(canvas.toJSON());
+    const next = JSON.stringify(createPersistentCanvasJson(canvas));
     const stack = historyRef.current[pageNumber] ?? [];
     const currentIndex = historyIndexRef.current[pageNumber] ?? -1;
     const trimmed = stack.slice(0, currentIndex + 1);
@@ -546,7 +559,7 @@ export function FunctionalPdfEditor() {
         nextFabric.requestRenderAll();
         skipHistoryRef.current = false;
       } else if (!historyRef.current[pageNumber]) {
-        const initial = JSON.stringify(nextFabric.toJSON());
+        const initial = JSON.stringify(createPersistentCanvasJson(nextFabric));
         historyRef.current[pageNumber] = [initial];
         historyIndexRef.current[pageNumber] = 0;
       }
@@ -743,7 +756,7 @@ export function FunctionalPdfEditor() {
     if (!canvas || !active || active.get("name") === CROP_AREA_NAME || pageCount <= 1) return;
     active.setCoords();
     const objectJson = active.toObject();
-    const currentPageJson = canvas.toJSON();
+    const currentPageJson = createPersistentCanvasJson(canvas);
     const nextState = { ...pageStatesRef.current };
     for (let page = 1; page <= pageCount; page += 1) {
       const currentJson = page === pageNumber ? currentPageJson : nextState[page]?.json;
@@ -804,13 +817,13 @@ export function FunctionalPdfEditor() {
       top: Math.max(24, Math.round((canvas.getHeight() - height) / 2)),
       width,
       height,
-      fill: "rgba(37, 99, 235, 0.08)",
-      stroke: "#2563eb",
+      fill: AREA_SELECTION_FILL,
+      stroke: AREA_SELECTION_STROKE,
       strokeDashArray: [8, 6],
       strokeWidth: 2,
       cornerStyle: "circle",
-      borderColor: "#2563eb",
-      cornerColor: "#2563eb",
+      borderColor: AREA_SELECTION_STROKE,
+      cornerColor: AREA_SELECTION_HANDLE,
     });
     canvas.add(cropArea);
     canvas.setActiveObject(cropArea);
@@ -1077,7 +1090,7 @@ export function FunctionalPdfEditor() {
         const pageNum = index + 1;
         const savedPageState = pageStatesRef.current[pageNum];
         const isCurrentPage = pageNum === pageNumber;
-        const state = isCurrentPage ? fabricRef.current?.toJSON() : savedPageState?.json;
+        const state = isCurrentPage && fabricRef.current ? createPersistentCanvasJson(fabricRef.current) : savedPageState?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
