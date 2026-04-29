@@ -867,7 +867,8 @@ export function FunctionalPdfEditor() {
     const canvas = requireCanvas();
     const clipboard = pdfAreaClipboardRef.current;
     if (!canvas || !clipboard) return;
-    const image = await fabric.FabricImage.fromURL(clipboard.dataUrl, { crossOrigin: "anonymous" });
+    const imageElement = await loadImage(clipboard.sourceUrl);
+    const image = new fabric.FabricImage(imageElement);
     image.set({
       left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
       top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
@@ -880,6 +881,7 @@ export function FunctionalPdfEditor() {
       borderColor: "#2563eb",
       cornerColor: "#2563eb",
     });
+    image.setCoords();
     canvas.add(image);
     canvas.setActiveObject(image);
     canvas.requestRenderAll();
