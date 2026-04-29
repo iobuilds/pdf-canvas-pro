@@ -817,13 +817,13 @@ export function FunctionalPdfEditor() {
       top: Math.max(24, Math.round((canvas.getHeight() - height) / 2)),
       width,
       height,
-      fill: "rgba(37, 99, 235, 0.08)",
-      stroke: "#2563eb",
+      fill: AREA_SELECTION_FILL,
+      stroke: AREA_SELECTION_STROKE,
       strokeDashArray: [8, 6],
       strokeWidth: 2,
       cornerStyle: "circle",
-      borderColor: "#2563eb",
-      cornerColor: "#2563eb",
+      borderColor: AREA_SELECTION_STROKE,
+      cornerColor: AREA_SELECTION_HANDLE,
     });
     canvas.add(cropArea);
     canvas.setActiveObject(cropArea);
