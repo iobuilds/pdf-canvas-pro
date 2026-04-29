@@ -1182,7 +1182,7 @@ export function FunctionalPdfEditor() {
             )}
           </div>
 
-          <div className="order-2 flex max-w-full items-center gap-2 overflow-x-auto sm:order-3">
+          <div className="order-2 flex max-w-full items-center gap-2 overflow-x-auto sm:order-3 [&>button]:shrink-0">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo">
               <Undo2 className="size-4" />
             </button>
@@ -1195,11 +1195,11 @@ export function FunctionalPdfEditor() {
               onClick={downloadSelectedAreaPng}
             >
               <Crop className="size-4" />
-              Download area PNG
+              <span className="hidden md:inline">Download area PNG</span>
             </button>
             <button className={primaryActionButton} onClick={exportPdf}>
               <Download className="size-4" />
-              Export PDF
+              <span className="hidden sm:inline">Export PDF</span>
             </button>
           </div>
         </div>
@@ -1302,7 +1302,7 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="grid min-h-[calc(100%-4.5rem)] min-w-max flex-1 place-items-center py-4 md:py-6">
+          <div className="grid min-h-[calc(100%-4.5rem)] min-w-full flex-1 place-items-center overflow-auto py-4 md:min-w-max md:py-6">
             <div className="w-fit animate-editor-enter rounded-sm shadow-page">
               <div className="relative bg-page">
                 <canvas ref={pdfCanvasRef} className="block" />
