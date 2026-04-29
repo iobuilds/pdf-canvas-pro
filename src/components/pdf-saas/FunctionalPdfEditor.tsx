@@ -993,6 +993,12 @@ export function FunctionalPdfEditor() {
     setIsLoading(true);
     try {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
+      pdfLibDoc.setTitle(pdfMetadata.title);
+      pdfLibDoc.setAuthor(pdfMetadata.author);
+      pdfLibDoc.setSubject(pdfMetadata.subject);
+      pdfLibDoc.setKeywords(pdfMetadata.keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean));
+      pdfLibDoc.setCreator(pdfMetadata.creator);
+      pdfLibDoc.setProducer(pdfMetadata.producer);
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
         const savedPageState = pageStatesRef.current[pageNum];
@@ -1039,7 +1045,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsLoading(false);
     }
-  }, [fileName, pageNumber, pdfBytes, pdfDoc, savePageState]);
+  }, [fileName, pageNumber, pdfBytes, pdfDoc, pdfMetadata, savePageState]);
 
   const downloadSelectedAreaPng = useCallback(() => {
     const pdfCanvas = pdfCanvasRef.current;
