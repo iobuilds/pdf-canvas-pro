@@ -300,6 +300,14 @@ export function FunctionalPdfEditor() {
     [pngPreviewUrl],
   );
 
+  useEffect(
+    () => () => {
+      pdfAreaObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      pdfAreaObjectUrlsRef.current = [];
+    },
+    [],
+  );
+
   const loadSystemFonts = useCallback(async () => {
     const queryLocalFonts = (window as FontAccessWindow).queryLocalFonts;
     if (!queryLocalFonts) {
