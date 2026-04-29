@@ -1354,6 +1354,14 @@ export function FunctionalPdfEditor() {
             </button>
           </div>
         </div>
+        {uploadProgress > 0 && (
+          <div className="h-1 w-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        )}
       </header>
 
       <section className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
@@ -1468,8 +1476,19 @@ export function FunctionalPdfEditor() {
                 )}
                 {(isLoading || isRendering) && (
                   <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
-                    <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
-                      <Loader2 className="size-4 animate-spin text-primary" /> Rendering PDF
+                    <div className="min-w-56 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                        {isUploading ? `Uploading ${uploadProgress}%` : "Rendering PDF"}
+                      </div>
+                      {isUploading && (
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
