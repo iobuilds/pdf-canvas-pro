@@ -46,6 +46,8 @@ type PageState = {
 
 type PdfAreaClipboard = {
   dataUrl: string;
+  left: number;
+  top: number;
   width: number;
   height: number;
 };
@@ -783,8 +785,11 @@ export function FunctionalPdfEditor() {
       const pdfCanvas = pdfCanvasRef.current;
       const canvas = fabricRef.current;
       if (!pdfCanvas || !canvas) return;
-      const active = canvas.getActiveObject();
-      if (!active || active.get("name") !== CROP_AREA_NAME) {
+      const active =
+        canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
+          ? canvas.getActiveObject()
+          : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+      if (!active) {
         toast.error("Select an area first.");
         return;
       }
@@ -809,6 +814,8 @@ export function FunctionalPdfEditor() {
       );
       pdfAreaClipboardRef.current = {
         dataUrl: areaCanvas.toDataURL("image/png"),
+        left: rect.left,
+        top: rect.top,
         width: rect.width,
         height: rect.height,
       };
@@ -829,8 +836,8 @@ export function FunctionalPdfEditor() {
     if (!canvas || !clipboard) return;
     const image = await fabric.FabricImage.fromURL(clipboard.dataUrl, { crossOrigin: "anonymous" });
     image.set({
-      left: Math.max(16, Math.round((canvas.getWidth() - clipboard.width) / 2)),
-      top: Math.max(16, Math.round((canvas.getHeight() - clipboard.height) / 2)),
+      left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
+      top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
       scaleX: clipboard.width / (image.width || clipboard.width),
       scaleY: clipboard.height / (image.height || clipboard.height),
       lockScalingX: true,
