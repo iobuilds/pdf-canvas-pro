@@ -166,16 +166,13 @@ function asFabricJson(json: unknown): FabricJson {
 }
 
 function createPersistentCanvasJson(canvas: fabric.StaticCanvas | FabricCanvas) {
-  const json = asFabricJson(canvas.toJSON(["name"]));
-  return {
-    ...json,
-    objects: Array.isArray(json.objects)
-      ? json.objects.filter(
-          (object) =>
-            !(object && typeof object === "object" && (object as { name?: string }).name === CROP_AREA_NAME),
-        )
-      : json.objects,
-  };
+  const activeObject = "getActiveObject" in canvas ? canvas.getActiveObject() : null;
+  const cropAreas = canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME);
+  cropAreas.forEach((object) => canvas.remove(object));
+  const json = canvas.toJSON();
+  cropAreas.forEach((object) => canvas.add(object));
+  if (activeObject && "setActiveObject" in canvas) canvas.setActiveObject(activeObject);
+  return json;
 }
 
 function renderWithTimeout(task: RenderTask) {
