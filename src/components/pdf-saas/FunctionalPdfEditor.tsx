@@ -1443,6 +1443,35 @@ export function FunctionalPdfEditor() {
                 <Crop className="size-4" />
                 Select area
               </button>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  className={iconButton + " w-full"}
+                  disabled={!selectedObject || selectedObject.get("name") !== CROP_AREA_NAME}
+                  onClick={() => copySelectedPdfArea(false)}
+                  aria-label="Copy selected PDF area"
+                >
+                  <Copy className="size-4" />
+                  <span className="hidden sm:inline">Copy</span>
+                </button>
+                <button
+                  className={iconButton + " w-full"}
+                  disabled={!selectedObject || selectedObject.get("name") !== CROP_AREA_NAME}
+                  onClick={() => copySelectedPdfArea(true)}
+                  aria-label="Cut selected PDF area"
+                >
+                  <Scissors className="size-4" />
+                  <span className="hidden sm:inline">Cut</span>
+                </button>
+                <button
+                  className={iconButton + " w-full"}
+                  disabled={!hasPdfAreaClipboard || !isEditorReady}
+                  onClick={() => void pastePdfArea()}
+                  aria-label="Paste copied PDF area"
+                >
+                  <ClipboardPaste className="size-4" />
+                  <span className="hidden sm:inline">Paste</span>
+                </button>
+              </div>
               <button
                 className={primaryActionButton + " w-full"}
                 disabled={!isEditorReady}
