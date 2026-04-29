@@ -1094,7 +1094,7 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 pb-1 sm:order-2 sm:mx-0 sm:w-auto sm:flex-1 sm:justify-center sm:px-2 sm:pb-0 [&>button]:shrink-0 [&>label]:shrink-0">
+          <div className="order-3 grid w-full grid-cols-8 gap-1 sm:order-2 sm:flex sm:w-auto sm:min-w-0 sm:flex-1 sm:items-center sm:justify-center sm:overflow-x-auto sm:px-2 [&>button]:min-w-0 [&>label]:min-w-0 sm:[&>button]:shrink-0 sm:[&>label]:shrink-0">
             <button
               className={`${iconButton} ${tool === "select" ? activeButton : ""}`}
               onClick={() => setTool("select")}
@@ -1182,7 +1182,7 @@ export function FunctionalPdfEditor() {
             )}
           </div>
 
-          <div className="order-2 flex max-w-full items-center gap-2 overflow-x-auto sm:order-3 [&>button]:shrink-0">
+          <div className="order-2 flex max-w-full items-center gap-2 sm:order-3 [&>button]:shrink-0">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo">
               <Undo2 className="size-4" />
             </button>
