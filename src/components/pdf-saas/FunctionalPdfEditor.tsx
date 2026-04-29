@@ -876,29 +876,33 @@ export function FunctionalPdfEditor() {
   );
 
   const pastePdfArea = useCallback(async () => {
-    const canvas = requireCanvas();
-    const clipboard = pdfAreaClipboardRef.current;
-    if (!canvas || !clipboard) return;
-    const imageElement = await loadImage(clipboard.sourceUrl);
-    const image = new fabric.FabricImage(imageElement);
-    image.set({
-      left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
-      top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
-      scaleX: clipboard.width / (image.width || clipboard.width),
-      scaleY: clipboard.height / (image.height || clipboard.height),
-      lockScalingX: true,
-      lockScalingY: true,
-      lockUniScaling: true,
-      cornerStyle: "circle",
-      borderColor: "#2563eb",
-      cornerColor: "#2563eb",
-    });
-    image.setCoords();
-    canvas.add(image);
-    canvas.setActiveObject(image);
-    canvas.requestRenderAll();
-    setSelectedObject(image);
-    setTool("select");
+    try {
+      const canvas = requireCanvas();
+      const clipboard = pdfAreaClipboardRef.current;
+      if (!canvas || !clipboard) return;
+      const imageElement = await loadImage(clipboard.sourceUrl);
+      const image = new fabric.FabricImage(imageElement);
+      image.set({
+        left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
+        top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
+        scaleX: clipboard.width / (image.width || clipboard.width),
+        scaleY: clipboard.height / (image.height || clipboard.height),
+        lockScalingX: true,
+        lockScalingY: true,
+        lockUniScaling: true,
+        cornerStyle: "circle",
+        borderColor: "#2563eb",
+        cornerColor: "#2563eb",
+      });
+      image.setCoords();
+      canvas.add(image);
+      canvas.setActiveObject(image);
+      canvas.requestRenderAll();
+      setSelectedObject(image);
+      setTool("select");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not paste the selected area.");
+    }
   }, [requireCanvas]);
 
   const addImageFromFile = useCallback(
