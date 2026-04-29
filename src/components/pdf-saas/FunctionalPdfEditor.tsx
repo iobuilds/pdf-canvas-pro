@@ -1297,7 +1297,7 @@ export function FunctionalPdfEditor() {
                 onClick={() => void fitPageToWindow()}
               >
                 <RotateCw className="size-4" />
-                Fit
+                <span className="hidden sm:inline">Fit</span>
               </button>
             </div>
           </div>
