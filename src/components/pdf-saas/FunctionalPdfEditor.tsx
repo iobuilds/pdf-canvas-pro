@@ -45,7 +45,7 @@ type PageState = {
 };
 
 type PdfAreaClipboard = {
-  dataUrl: string;
+  sourceUrl: string;
   left: number;
   top: number;
   width: number;
@@ -70,6 +70,8 @@ type FabricJson = {
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const PDF_RENDER_TIMEOUT_MS = 7000;
+const AREA_CLIPBOARD_MAX_DIMENSION = 8192;
+const AREA_CLIPBOARD_MAX_PIXELS = 16_000_000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const SYSTEM_FONTS = [
   "Arial",
@@ -187,6 +189,33 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
   };
 }
 
+function getSafeAreaCaptureScale(width: number, height: number, pixelRatioX: number, pixelRatioY: number) {
+  const baseScale = Math.min(pixelRatioX, pixelRatioY);
+  const scaledWidth = width * baseScale;
+  const scaledHeight = height * baseScale;
+  const dimensionLimit = AREA_CLIPBOARD_MAX_DIMENSION / Math.max(scaledWidth, scaledHeight, 1);
+  const pixelLimit = Math.sqrt(AREA_CLIPBOARD_MAX_PIXELS / Math.max(scaledWidth * scaledHeight, 1));
+  return baseScale * Math.min(1, dimensionLimit, pixelLimit);
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Could not copy the selected area."));
+    }, "image/png");
+  });
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not read the selected area."));
+    image.src = src;
+  });
+}
+
 function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
   const toWidth = canvas.getWidth();
   const toHeight = canvas.getHeight();
@@ -226,6 +255,7 @@ export function FunctionalPdfEditor() {
   const skipHistoryRef = useRef(false);
   const toolRef = useRef<Tool>("select");
   const pdfAreaClipboardRef = useRef<PdfAreaClipboard | null>(null);
+  const pdfAreaObjectUrlsRef = useRef<string[]>([]);
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
@@ -268,6 +298,14 @@ export function FunctionalPdfEditor() {
       if (pngPreviewUrl) URL.revokeObjectURL(pngPreviewUrl);
     },
     [pngPreviewUrl],
+  );
+
+  useEffect(
+    () => () => {
+      pdfAreaObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      pdfAreaObjectUrlsRef.current = [];
+    },
+    [],
   );
 
   const loadSystemFonts = useCallback(async () => {
@@ -781,77 +819,90 @@ export function FunctionalPdfEditor() {
   }, [requireCanvas]);
 
   const copySelectedPdfArea = useCallback(
-    (cut = false) => {
-      const pdfCanvas = pdfCanvasRef.current;
-      const canvas = fabricRef.current;
-      if (!pdfCanvas || !canvas) return;
-      const active =
-        canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
-          ? canvas.getActiveObject()
-          : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
-      if (!active) {
-        toast.error("Select an area first.");
-        return;
+    async (cut = false) => {
+      try {
+        const pdfCanvas = pdfCanvasRef.current;
+        const canvas = fabricRef.current;
+        if (!pdfCanvas || !canvas) return;
+        const active =
+          canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
+            ? canvas.getActiveObject()
+            : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+        if (!active) {
+          toast.error("Select an area first.");
+          return;
+        }
+        const rect = getCropExportRect(active, canvas);
+        const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+        const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+        const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+        const areaCanvas = document.createElement("canvas");
+        areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+        areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+        const context = areaCanvas.getContext("2d");
+        if (!context) return;
+        context.drawImage(
+          pdfCanvas,
+          rect.left * pixelRatioX,
+          rect.top * pixelRatioY,
+          rect.width * pixelRatioX,
+          rect.height * pixelRatioY,
+          0,
+          0,
+          areaCanvas.width,
+          areaCanvas.height,
+        );
+        const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
+        pdfAreaObjectUrlsRef.current.push(sourceUrl);
+        pdfAreaClipboardRef.current = {
+          sourceUrl,
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+        setHasPdfAreaClipboard(true);
+        if (cut) {
+          active.set({ fill: "#ffffff", stroke: "#ffffff", strokeDashArray: undefined });
+          canvas.requestRenderAll();
+          pushHistory();
+        }
+        toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not copy the selected area.");
       }
-      const rect = getCropExportRect(active, canvas);
-      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-      const areaCanvas = document.createElement("canvas");
-      areaCanvas.width = Math.max(1, Math.round(rect.width * pixelRatioX));
-      areaCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
-      const context = areaCanvas.getContext("2d");
-      if (!context) return;
-      context.drawImage(
-        pdfCanvas,
-        rect.left * pixelRatioX,
-        rect.top * pixelRatioY,
-        rect.width * pixelRatioX,
-        rect.height * pixelRatioY,
-        0,
-        0,
-        areaCanvas.width,
-        areaCanvas.height,
-      );
-      pdfAreaClipboardRef.current = {
-        dataUrl: areaCanvas.toDataURL("image/png"),
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
-      setHasPdfAreaClipboard(true);
-      if (cut) {
-        active.set({ fill: "#ffffff", stroke: "#ffffff", strokeDashArray: undefined });
-        canvas.requestRenderAll();
-        pushHistory();
-      }
-      toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
     },
     [pushHistory],
   );
 
   const pastePdfArea = useCallback(async () => {
-    const canvas = requireCanvas();
-    const clipboard = pdfAreaClipboardRef.current;
-    if (!canvas || !clipboard) return;
-    const image = await fabric.FabricImage.fromURL(clipboard.dataUrl, { crossOrigin: "anonymous" });
-    image.set({
-      left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
-      top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
-      scaleX: clipboard.width / (image.width || clipboard.width),
-      scaleY: clipboard.height / (image.height || clipboard.height),
-      lockScalingX: true,
-      lockScalingY: true,
-      lockUniScaling: true,
-      cornerStyle: "circle",
-      borderColor: "#2563eb",
-      cornerColor: "#2563eb",
-    });
-    canvas.add(image);
-    canvas.setActiveObject(image);
-    canvas.requestRenderAll();
-    setSelectedObject(image);
-    setTool("select");
+    try {
+      const canvas = requireCanvas();
+      const clipboard = pdfAreaClipboardRef.current;
+      if (!canvas || !clipboard) return;
+      const imageElement = await loadImage(clipboard.sourceUrl);
+      const image = new fabric.FabricImage(imageElement);
+      image.set({
+        left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
+        top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
+        scaleX: clipboard.width / (image.width || clipboard.width),
+        scaleY: clipboard.height / (image.height || clipboard.height),
+        lockScalingX: true,
+        lockScalingY: true,
+        lockUniScaling: true,
+        cornerStyle: "circle",
+        borderColor: "#2563eb",
+        cornerColor: "#2563eb",
+      });
+      image.setCoords();
+      canvas.add(image);
+      canvas.setActiveObject(image);
+      canvas.requestRenderAll();
+      setSelectedObject(image);
+      setTool("select");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not paste the selected area.");
+    }
   }, [requireCanvas]);
 
   const addImageFromFile = useCallback(
