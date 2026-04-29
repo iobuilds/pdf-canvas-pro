@@ -740,6 +740,75 @@ export function FunctionalPdfEditor() {
     setTool("select");
   }, [requireCanvas]);
 
+  const copySelectedPdfArea = useCallback(
+    (cut = false) => {
+      const pdfCanvas = pdfCanvasRef.current;
+      const canvas = fabricRef.current;
+      if (!pdfCanvas || !canvas) return;
+      const active = canvas.getActiveObject();
+      if (!active || active.get("name") !== CROP_AREA_NAME) {
+        toast.error("Select an area first.");
+        return;
+      }
+      const rect = getCropExportRect(active, canvas);
+      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+      const areaCanvas = document.createElement("canvas");
+      areaCanvas.width = Math.max(1, Math.round(rect.width * pixelRatioX));
+      areaCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
+      const context = areaCanvas.getContext("2d");
+      if (!context) return;
+      context.drawImage(
+        pdfCanvas,
+        rect.left * pixelRatioX,
+        rect.top * pixelRatioY,
+        rect.width * pixelRatioX,
+        rect.height * pixelRatioY,
+        0,
+        0,
+        areaCanvas.width,
+        areaCanvas.height,
+      );
+      pdfAreaClipboardRef.current = {
+        dataUrl: areaCanvas.toDataURL("image/png"),
+        width: rect.width,
+        height: rect.height,
+      };
+      setHasPdfAreaClipboard(true);
+      if (cut) {
+        active.set({ fill: "#ffffff", stroke: "#ffffff", strokeDashArray: undefined });
+        canvas.requestRenderAll();
+        pushHistory();
+      }
+      toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
+    },
+    [pushHistory],
+  );
+
+  const pastePdfArea = useCallback(async () => {
+    const canvas = requireCanvas();
+    const clipboard = pdfAreaClipboardRef.current;
+    if (!canvas || !clipboard) return;
+    const image = await fabric.FabricImage.fromURL(clipboard.dataUrl, { crossOrigin: "anonymous" });
+    image.set({
+      left: Math.max(16, Math.round((canvas.getWidth() - clipboard.width) / 2)),
+      top: Math.max(16, Math.round((canvas.getHeight() - clipboard.height) / 2)),
+      scaleX: clipboard.width / (image.width || clipboard.width),
+      scaleY: clipboard.height / (image.height || clipboard.height),
+      lockScalingX: true,
+      lockScalingY: true,
+      lockUniScaling: true,
+      cornerStyle: "circle",
+      borderColor: "#2563eb",
+      cornerColor: "#2563eb",
+    });
+    canvas.add(image);
+    canvas.setActiveObject(image);
+    canvas.requestRenderAll();
+    setSelectedObject(image);
+    setTool("select");
+  }, [requireCanvas]);
+
   const addImageFromFile = useCallback(
     async (file: File) => {
       const canvas = requireCanvas();
