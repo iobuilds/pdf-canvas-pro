@@ -174,7 +174,7 @@ function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidt
 }
 
 const iconButton =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-3 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45";
+  "inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg border border-border bg-panel px-0 text-sm font-semibold text-foreground shadow-soft transition hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45 sm:w-auto sm:px-3";
 const activeButton = "bg-primary text-primary-foreground shadow-blue hover:bg-primary/90";
 const uploadInputClass = "absolute inset-0 cursor-pointer opacity-0";
 const primaryActionButton = `${iconButton} bg-primary text-primary-foreground shadow-blue hover:bg-primary/90`;
@@ -1070,7 +1070,7 @@ export function FunctionalPdfEditor() {
 
   return (
     <main
-      className={`min-h-screen bg-workspace text-foreground ${isDraggingOver ? "ring-4 ring-primary/40" : ""}`}
+      className={`min-h-screen overflow-x-hidden bg-workspace text-foreground ${isDraggingOver ? "ring-4 ring-primary/40" : ""}`}
       onDragOver={(event) => {
         event.preventDefault();
         setIsDraggingOver(true);
@@ -1079,8 +1079,8 @@ export function FunctionalPdfEditor() {
       onDrop={handleDrop}
     >
       <header className="sticky top-0 z-30 border-b border-border bg-panel/95 shadow-soft backdrop-blur">
-        <div className="flex h-16 items-center justify-between gap-3 px-3 md:px-5">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 px-3 py-2 md:gap-3 md:px-5">
+          <div className="order-1 flex min-w-0 flex-1 items-center gap-3 sm:flex-none">
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-blue">
               <FileText className="size-5" />
             </div>
@@ -1094,17 +1094,17 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
+          <div className="order-3 grid w-full grid-cols-8 gap-1 sm:order-2 sm:flex sm:w-auto sm:min-w-0 sm:flex-1 sm:items-center sm:justify-center sm:overflow-x-auto sm:px-2 [&>button]:min-w-0 [&>label]:min-w-0 sm:[&>button]:shrink-0 sm:[&>label]:shrink-0">
             <button
               className={`${iconButton} ${tool === "select" ? activeButton : ""}`}
               onClick={() => setTool("select")}
             >
               <MousePointer2 className="size-4" />
-              Select
+              <span className="hidden sm:inline">Select</span>
             </button>
             <label className={`${iconButton} relative overflow-hidden`}>
               <Upload className="size-4" />
-              Upload
+              <span className="hidden sm:inline">Upload</span>
               <input
                 ref={fileInputRef}
                 className={uploadInputClass}
@@ -1115,13 +1115,13 @@ export function FunctionalPdfEditor() {
             </label>
             <button className={iconButton} disabled={!isEditorReady} onClick={addText}>
               <Type className="size-4" />
-              Text
+              <span className="hidden sm:inline">Text</span>
             </button>
             <label
               className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}
             >
               <ImagePlus className="size-4" />
-              Image
+              <span className="hidden sm:inline">Image</span>
               <input
                 ref={imageInputRef}
                 className={uploadInputClass}
@@ -1137,19 +1137,19 @@ export function FunctionalPdfEditor() {
             </label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}>
               <Square className="size-4" />
-              Rect
+              <span className="hidden sm:inline">Rect</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}>
               <Circle className="size-4" />
-              Circle
+              <span className="hidden sm:inline">Circle</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}>
               <Crop className="size-4" />
-              Select area
+              <span className="hidden sm:inline">Area</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}>
               <Highlighter className="size-4" />
-              Highlight
+              <span className="hidden sm:inline">Highlight</span>
             </button>
             <button
               className={`${iconButton} ${tool === "pen" ? activeButton : ""}`}
@@ -1157,7 +1157,7 @@ export function FunctionalPdfEditor() {
               onClick={() => setTool("pen")}
             >
               <PenLine className="size-4" />
-              Pen
+              <span className="hidden sm:inline">Pen</span>
             </button>
             <button
               className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`}
@@ -1165,7 +1165,7 @@ export function FunctionalPdfEditor() {
               onClick={() => setTool("eraser")}
             >
               <Eraser className="size-4" />
-              Erase
+              <span className="hidden sm:inline">Erase</span>
             </button>
             {tool === "eraser" && (
               <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-panel px-3 text-xs font-semibold text-muted-foreground shadow-soft">
@@ -1182,7 +1182,7 @@ export function FunctionalPdfEditor() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="order-2 flex max-w-full items-center gap-2 sm:order-3 [&>button]:shrink-0">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo">
               <Undo2 className="size-4" />
             </button>
@@ -1195,18 +1195,18 @@ export function FunctionalPdfEditor() {
               onClick={downloadSelectedAreaPng}
             >
               <Crop className="size-4" />
-              Download area PNG
+              <span className="hidden md:inline">Download area PNG</span>
             </button>
             <button className={primaryActionButton} onClick={exportPdf}>
               <Download className="size-4" />
-              Export PDF
+              <span className="hidden sm:inline">Export PDF</span>
             </button>
           </div>
         </div>
       </header>
 
-      <section className="grid h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
-        <aside className="hidden overflow-y-auto border-r border-border bg-panel p-3 lg:block">
+      <section className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
+        <aside className="order-2 max-h-56 overflow-y-auto border-t border-border bg-panel p-3 lg:order-none lg:block lg:max-h-none lg:border-r lg:border-t-0">
           <label className="relative mb-3 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-primary/50 bg-primary/8 px-4 py-5 text-sm font-semibold transition hover:bg-primary/12">
             <Upload className="size-4" /> Upload PDF
             <input
@@ -1262,7 +1262,7 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div ref={workspaceRef} className="relative flex min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6">
+        <div ref={workspaceRef} className="relative order-1 flex min-h-[60vh] min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6 lg:order-none lg:min-h-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1297,12 +1297,12 @@ export function FunctionalPdfEditor() {
                 onClick={() => void fitPageToWindow()}
               >
                 <RotateCw className="size-4" />
-                Fit
+                <span className="hidden sm:inline">Fit</span>
               </button>
             </div>
           </div>
 
-          <div className="grid min-h-[calc(100%-4.5rem)] min-w-max flex-1 place-items-center py-6">
+          <div className="grid min-h-[calc(100%-4.5rem)] min-w-full flex-1 place-items-center overflow-auto py-4 md:min-w-max md:py-6">
             <div className="w-fit animate-editor-enter rounded-sm shadow-page">
               <div className="relative bg-page">
                 <canvas ref={pdfCanvasRef} className="block" />
@@ -1319,7 +1319,7 @@ export function FunctionalPdfEditor() {
           </div>
         </div>
 
-        <aside className="hidden overflow-y-auto border-l border-border bg-panel p-4 lg:block">
+        <aside className="order-3 overflow-y-auto border-t border-border bg-panel p-3 sm:p-4 lg:order-none lg:block lg:border-l lg:border-t-0">
           <div className="mb-5">
             <p className="text-sm font-semibold">Properties</p>
             <p className="mt-1 text-xs text-muted-foreground">{selectedDescription}</p>
