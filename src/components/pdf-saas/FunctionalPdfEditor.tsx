@@ -50,6 +50,15 @@ type PdfAreaClipboard = {
   height: number;
 };
 
+type PdfMetadata = {
+  title: string;
+  author: string;
+  subject: string;
+  keywords: string;
+  creator: string;
+  producer: string;
+};
+
 type FabricJson = {
   version?: string;
   objects?: unknown[];
@@ -103,6 +112,14 @@ const SYSTEM_FONTS = [
   "SF Pro Text",
 ];
 const CROP_AREA_NAME = "export-crop-area";
+const EMPTY_PDF_METADATA: PdfMetadata = {
+  title: "",
+  author: "",
+  subject: "",
+  keywords: "",
+  creator: "",
+  producer: "",
+};
 
 type LocalFontEntry = {
   family: string;
