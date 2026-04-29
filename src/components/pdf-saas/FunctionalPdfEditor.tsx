@@ -1307,6 +1307,14 @@ export function FunctionalPdfEditor() {
               <div className="relative bg-page">
                 <canvas ref={pdfCanvasRef} className="block" />
                 <div ref={overlayHostRef} className="absolute inset-0" />
+                {!pdfDoc && !isLoading && (
+                  <div className="absolute inset-0 grid place-items-center p-6 text-center">
+                    <div className="space-y-2">
+                      <p className="text-lg font-bold text-foreground">PDF Editor v1.0</p>
+                      <p className="text-sm font-medium text-muted-foreground">Drop PDF here to start editing</p>
+                    </div>
+                  </div>
+                )}
                 {(isLoading || isRendering) && (
                   <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
                     <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
