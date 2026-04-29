@@ -1152,6 +1152,15 @@ export function FunctionalPdfEditor() {
     [availableFonts, pushHistory],
   );
 
+  const updatePdfMetadata = useCallback((field: keyof PdfMetadata, value: string) => {
+    setPdfMetadata((metadata) => ({ ...metadata, [field]: value }));
+  }, []);
+
+  const clearPdfMetadata = useCallback(() => {
+    setPdfMetadata(EMPTY_PDF_METADATA);
+    toast.success("PDF metadata cleared");
+  }, []);
+
   const toggleSelectedTextStyle = useCallback(
     (style: "bold" | "underline") => {
       const canvas = fabricRef.current;
