@@ -1701,6 +1701,27 @@ export function FunctionalPdfEditor() {
                 ))}
               </div>
             </div>
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  PDF metadata
+                </span>
+                <button className="text-xs font-semibold text-primary" type="button" onClick={clearPdfMetadata}>
+                  Clear all
+                </button>
+              </div>
+              {Object.entries(pdfMetadata).map(([field, value]) => (
+                <label key={field} className="block space-y-1 text-xs font-medium capitalize text-muted-foreground">
+                  {field}
+                  <input
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    value={value}
+                    disabled={!pdfDoc}
+                    onChange={(event) => updatePdfMetadata(field as keyof PdfMetadata, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Color
