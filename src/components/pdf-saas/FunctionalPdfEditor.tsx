@@ -132,11 +132,14 @@ type FontAccessWindow = Window & {
   queryLocalFonts?: () => Promise<LocalFontEntry[]>;
 };
 
-function readFileAsArrayBuffer(file: File) {
+function readFileAsArrayBuffer(file: File, onProgress?: (progress: number) => void) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as ArrayBuffer);
     reader.onerror = () => reject(new Error("Could not read this PDF."));
+    reader.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 90));
+    };
     reader.readAsArrayBuffer(file);
   });
 }
