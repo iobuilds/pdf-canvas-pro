@@ -236,6 +236,7 @@ export function FunctionalPdfEditor() {
   const [tool, setTool] = useState<Tool>("select");
   const [isLoading, setIsLoading] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
@@ -249,6 +250,8 @@ export function FunctionalPdfEditor() {
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
+
+  const isUploading = isLoading && uploadProgress > 0 && uploadProgress < 100;
 
   useEffect(() => {
     toolRef.current = tool;
