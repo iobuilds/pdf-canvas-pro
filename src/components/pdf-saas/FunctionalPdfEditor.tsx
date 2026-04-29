@@ -1079,8 +1079,8 @@ export function FunctionalPdfEditor() {
       onDrop={handleDrop}
     >
       <header className="sticky top-0 z-30 border-b border-border bg-panel/95 shadow-soft backdrop-blur">
-        <div className="flex h-16 items-center justify-between gap-3 px-3 md:px-5">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 px-3 py-2 md:gap-3 md:px-5">
+          <div className="order-1 flex min-w-0 flex-1 items-center gap-3 sm:flex-none">
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-blue">
               <FileText className="size-5" />
             </div>
@@ -1094,7 +1094,7 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto px-2">
+          <div className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 pb-1 sm:order-2 sm:mx-0 sm:w-auto sm:flex-1 sm:justify-center sm:px-2 sm:pb-0">
             <button
               className={`${iconButton} ${tool === "select" ? activeButton : ""}`}
               onClick={() => setTool("select")}
@@ -1182,7 +1182,7 @@ export function FunctionalPdfEditor() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="order-2 flex max-w-full items-center gap-2 overflow-x-auto sm:order-3">
             <button className={iconButton} onClick={() => applyHistory(-1)} aria-label="Undo">
               <Undo2 className="size-4" />
             </button>
