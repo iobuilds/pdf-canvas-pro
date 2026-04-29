@@ -255,6 +255,7 @@ export function FunctionalPdfEditor() {
   const skipHistoryRef = useRef(false);
   const toolRef = useRef<Tool>("select");
   const pdfAreaClipboardRef = useRef<PdfAreaClipboard | null>(null);
+  const pdfAreaObjectUrlsRef = useRef<string[]>([]);
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
@@ -810,7 +811,7 @@ export function FunctionalPdfEditor() {
   }, [requireCanvas]);
 
   const copySelectedPdfArea = useCallback(
-    (cut = false) => {
+    async (cut = false) => {
       const pdfCanvas = pdfCanvasRef.current;
       const canvas = fabricRef.current;
       if (!pdfCanvas || !canvas) return;
@@ -825,9 +826,10 @@ export function FunctionalPdfEditor() {
       const rect = getCropExportRect(active, canvas);
       const pixelRatioX = pdfCanvas.width / canvas.getWidth();
       const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
       const areaCanvas = document.createElement("canvas");
-      areaCanvas.width = Math.max(1, Math.round(rect.width * pixelRatioX));
-      areaCanvas.height = Math.max(1, Math.round(rect.height * pixelRatioY));
+      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
       const context = areaCanvas.getContext("2d");
       if (!context) return;
       context.drawImage(
@@ -841,8 +843,10 @@ export function FunctionalPdfEditor() {
         areaCanvas.width,
         areaCanvas.height,
       );
+      const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
+      pdfAreaObjectUrlsRef.current.push(sourceUrl);
       pdfAreaClipboardRef.current = {
-        dataUrl: areaCanvas.toDataURL("image/png"),
+        sourceUrl,
         left: rect.left,
         top: rect.top,
         width: rect.width,
