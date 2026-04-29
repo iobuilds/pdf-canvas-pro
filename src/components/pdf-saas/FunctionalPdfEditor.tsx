@@ -538,6 +538,7 @@ export function FunctionalPdfEditor() {
   const loadPdf = useCallback(
     async (source: ArrayBuffer, name: string) => {
       setIsLoading(true);
+      setUploadProgress((progress) => Math.max(progress, 92));
       try {
         const copy = source.slice(0);
         const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
@@ -567,12 +568,14 @@ export function FunctionalPdfEditor() {
         setMatches([]);
         historyRef.current = {};
         historyIndexRef.current = {};
+        setUploadProgress(100);
         toast.success("PDF loaded");
         void generatePageThumbnails(doc);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
       } finally {
         setIsLoading(false);
+        window.setTimeout(() => setUploadProgress(0), 600);
       }
     },
     [generatePageThumbnails],
@@ -615,7 +618,9 @@ export function FunctionalPdfEditor() {
         toast.error("PDF must be 500MB or smaller.");
         return;
       }
-      const buffer = await readFileAsArrayBuffer(file);
+      setIsLoading(true);
+      setUploadProgress(1);
+      const buffer = await readFileAsArrayBuffer(file, setUploadProgress);
       await loadPdf(buffer, file.name);
     },
     [loadPdf],
