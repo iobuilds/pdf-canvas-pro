@@ -132,11 +132,14 @@ type FontAccessWindow = Window & {
   queryLocalFonts?: () => Promise<LocalFontEntry[]>;
 };
 
-function readFileAsArrayBuffer(file: File) {
+function readFileAsArrayBuffer(file: File, onProgress?: (progress: number) => void) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as ArrayBuffer);
     reader.onerror = () => reject(new Error("Could not read this PDF."));
+    reader.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 90));
+    };
     reader.readAsArrayBuffer(file);
   });
 }
@@ -233,6 +236,7 @@ export function FunctionalPdfEditor() {
   const [tool, setTool] = useState<Tool>("select");
   const [isLoading, setIsLoading] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
@@ -246,6 +250,8 @@ export function FunctionalPdfEditor() {
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
+
+  const isUploading = isLoading && uploadProgress > 0 && uploadProgress < 100;
 
   useEffect(() => {
     toolRef.current = tool;
@@ -532,6 +538,7 @@ export function FunctionalPdfEditor() {
   const loadPdf = useCallback(
     async (source: ArrayBuffer, name: string) => {
       setIsLoading(true);
+      setUploadProgress((progress) => Math.max(progress, 92));
       try {
         const copy = source.slice(0);
         const pdfjs = pdfjsRef.current ?? (await import("pdfjs-dist/legacy/build/pdf.mjs"));
@@ -561,12 +568,14 @@ export function FunctionalPdfEditor() {
         setMatches([]);
         historyRef.current = {};
         historyIndexRef.current = {};
+        setUploadProgress(100);
         toast.success("PDF loaded");
         void generatePageThumbnails(doc);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Invalid PDF file.");
       } finally {
         setIsLoading(false);
+        window.setTimeout(() => setUploadProgress(0), 600);
       }
     },
     [generatePageThumbnails],
@@ -609,7 +618,9 @@ export function FunctionalPdfEditor() {
         toast.error("PDF must be 500MB or smaller.");
         return;
       }
-      const buffer = await readFileAsArrayBuffer(file);
+      setIsLoading(true);
+      setUploadProgress(1);
+      const buffer = await readFileAsArrayBuffer(file, setUploadProgress);
       await loadPdf(buffer, file.name);
     },
     [loadPdf],
@@ -1343,6 +1354,14 @@ export function FunctionalPdfEditor() {
             </button>
           </div>
         </div>
+        {uploadProgress > 0 && (
+          <div className="h-1 w-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        )}
       </header>
 
       <section className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:grid-cols-[14rem_minmax(0,1fr)_17rem]">
@@ -1457,8 +1476,19 @@ export function FunctionalPdfEditor() {
                 )}
                 {(isLoading || isRendering) && (
                   <div className="absolute inset-0 grid place-items-center bg-panel/70 backdrop-blur-sm">
-                    <div className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
-                      <Loader2 className="size-4 animate-spin text-primary" /> Rendering PDF
+                    <div className="min-w-56 rounded-xl border border-border bg-panel px-4 py-3 text-sm font-semibold shadow-soft">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                        {isUploading ? `Uploading ${uploadProgress}%` : "Rendering PDF"}
+                      </div>
+                      {isUploading && (
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
