@@ -1070,7 +1070,7 @@ export function FunctionalPdfEditor() {
 
   return (
     <main
-      className={`min-h-screen bg-workspace text-foreground ${isDraggingOver ? "ring-4 ring-primary/40" : ""}`}
+      className={`min-h-screen overflow-x-hidden bg-workspace text-foreground ${isDraggingOver ? "ring-4 ring-primary/40" : ""}`}
       onDragOver={(event) => {
         event.preventDefault();
         setIsDraggingOver(true);
@@ -1094,17 +1094,17 @@ export function FunctionalPdfEditor() {
             </div>
           </div>
 
-          <div className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 pb-1 sm:order-2 sm:mx-0 sm:w-auto sm:flex-1 sm:justify-center sm:px-2 sm:pb-0">
+          <div className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 pb-1 sm:order-2 sm:mx-0 sm:w-auto sm:flex-1 sm:justify-center sm:px-2 sm:pb-0 [&>button]:shrink-0 [&>label]:shrink-0">
             <button
               className={`${iconButton} ${tool === "select" ? activeButton : ""}`}
               onClick={() => setTool("select")}
             >
               <MousePointer2 className="size-4" />
-              Select
+              <span className="hidden sm:inline">Select</span>
             </button>
             <label className={`${iconButton} relative overflow-hidden`}>
               <Upload className="size-4" />
-              Upload
+              <span className="hidden sm:inline">Upload</span>
               <input
                 ref={fileInputRef}
                 className={uploadInputClass}
@@ -1115,13 +1115,13 @@ export function FunctionalPdfEditor() {
             </label>
             <button className={iconButton} disabled={!isEditorReady} onClick={addText}>
               <Type className="size-4" />
-              Text
+              <span className="hidden sm:inline">Text</span>
             </button>
             <label
               className={`${iconButton} relative overflow-hidden ${!isEditorReady ? "pointer-events-none opacity-45" : ""}`}
             >
               <ImagePlus className="size-4" />
-              Image
+              <span className="hidden sm:inline">Image</span>
               <input
                 ref={imageInputRef}
                 className={uploadInputClass}
@@ -1137,19 +1137,19 @@ export function FunctionalPdfEditor() {
             </label>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(false)}>
               <Square className="size-4" />
-              Rect
+              <span className="hidden sm:inline">Rect</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCircle}>
               <Circle className="size-4" />
-              Circle
+              <span className="hidden sm:inline">Circle</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={addCropArea}>
               <Crop className="size-4" />
-              Select area
+              <span className="hidden sm:inline">Area</span>
             </button>
             <button className={iconButton} disabled={!isEditorReady} onClick={() => addRect(true)}>
               <Highlighter className="size-4" />
-              Highlight
+              <span className="hidden sm:inline">Highlight</span>
             </button>
             <button
               className={`${iconButton} ${tool === "pen" ? activeButton : ""}`}
@@ -1157,7 +1157,7 @@ export function FunctionalPdfEditor() {
               onClick={() => setTool("pen")}
             >
               <PenLine className="size-4" />
-              Pen
+              <span className="hidden sm:inline">Pen</span>
             </button>
             <button
               className={`${iconButton} ${tool === "eraser" ? activeButton : ""}`}
@@ -1165,7 +1165,7 @@ export function FunctionalPdfEditor() {
               onClick={() => setTool("eraser")}
             >
               <Eraser className="size-4" />
-              Erase
+              <span className="hidden sm:inline">Erase</span>
             </button>
             {tool === "eraser" && (
               <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-panel px-3 text-xs font-semibold text-muted-foreground shadow-soft">
