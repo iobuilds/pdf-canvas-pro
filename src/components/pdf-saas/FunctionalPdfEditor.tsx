@@ -44,6 +44,12 @@ type PageState = {
   thumbnail?: string;
 };
 
+type PdfAreaClipboard = {
+  dataUrl: string;
+  width: number;
+  height: number;
+};
+
 type FabricJson = {
   version?: string;
   objects?: unknown[];
@@ -197,6 +203,7 @@ export function FunctionalPdfEditor() {
   const pdfjsRef = useRef<PdfJsModule | null>(null);
   const skipHistoryRef = useRef(false);
   const toolRef = useRef<Tool>("select");
+  const pdfAreaClipboardRef = useRef<PdfAreaClipboard | null>(null);
 
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
@@ -220,6 +227,7 @@ export function FunctionalPdfEditor() {
   const [availableFonts, setAvailableFonts] = useState(SYSTEM_FONTS);
   const [manualFontFamily, setManualFontFamily] = useState("");
   const [eraserSize, setEraserSize] = useState(18);
+  const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
 
   useEffect(() => {
     toolRef.current = tool;
