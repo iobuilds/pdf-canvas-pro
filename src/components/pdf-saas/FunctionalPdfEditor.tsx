@@ -820,53 +820,57 @@ export function FunctionalPdfEditor() {
 
   const copySelectedPdfArea = useCallback(
     async (cut = false) => {
-      const pdfCanvas = pdfCanvasRef.current;
-      const canvas = fabricRef.current;
-      if (!pdfCanvas || !canvas) return;
-      const active =
-        canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
-          ? canvas.getActiveObject()
-          : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
-      if (!active) {
-        toast.error("Select an area first.");
-        return;
+      try {
+        const pdfCanvas = pdfCanvasRef.current;
+        const canvas = fabricRef.current;
+        if (!pdfCanvas || !canvas) return;
+        const active =
+          canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
+            ? canvas.getActiveObject()
+            : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+        if (!active) {
+          toast.error("Select an area first.");
+          return;
+        }
+        const rect = getCropExportRect(active, canvas);
+        const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+        const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+        const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+        const areaCanvas = document.createElement("canvas");
+        areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+        areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+        const context = areaCanvas.getContext("2d");
+        if (!context) return;
+        context.drawImage(
+          pdfCanvas,
+          rect.left * pixelRatioX,
+          rect.top * pixelRatioY,
+          rect.width * pixelRatioX,
+          rect.height * pixelRatioY,
+          0,
+          0,
+          areaCanvas.width,
+          areaCanvas.height,
+        );
+        const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
+        pdfAreaObjectUrlsRef.current.push(sourceUrl);
+        pdfAreaClipboardRef.current = {
+          sourceUrl,
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+        setHasPdfAreaClipboard(true);
+        if (cut) {
+          active.set({ fill: "#ffffff", stroke: "#ffffff", strokeDashArray: undefined });
+          canvas.requestRenderAll();
+          pushHistory();
+        }
+        toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not copy the selected area.");
       }
-      const rect = getCropExportRect(active, canvas);
-      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
-      const areaCanvas = document.createElement("canvas");
-      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
-      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
-      const context = areaCanvas.getContext("2d");
-      if (!context) return;
-      context.drawImage(
-        pdfCanvas,
-        rect.left * pixelRatioX,
-        rect.top * pixelRatioY,
-        rect.width * pixelRatioX,
-        rect.height * pixelRatioY,
-        0,
-        0,
-        areaCanvas.width,
-        areaCanvas.height,
-      );
-      const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
-      pdfAreaObjectUrlsRef.current.push(sourceUrl);
-      pdfAreaClipboardRef.current = {
-        sourceUrl,
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
-      setHasPdfAreaClipboard(true);
-      if (cut) {
-        active.set({ fill: "#ffffff", stroke: "#ffffff", strokeDashArray: undefined });
-        canvas.requestRenderAll();
-        pushHistory();
-      }
-      toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
     },
     [pushHistory],
   );
