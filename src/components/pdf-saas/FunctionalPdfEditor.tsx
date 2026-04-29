@@ -756,7 +756,7 @@ export function FunctionalPdfEditor() {
     if (!canvas || !active || active.get("name") === CROP_AREA_NAME || pageCount <= 1) return;
     active.setCoords();
     const objectJson = active.toObject();
-    const currentPageJson = canvas.toJSON();
+    const currentPageJson = createPersistentCanvasJson(canvas);
     const nextState = { ...pageStatesRef.current };
     for (let page = 1; page <= pageCount; page += 1) {
       const currentJson = page === pageNumber ? currentPageJson : nextState[page]?.json;
@@ -1090,7 +1090,7 @@ export function FunctionalPdfEditor() {
         const pageNum = index + 1;
         const savedPageState = pageStatesRef.current[pageNum];
         const isCurrentPage = pageNum === pageNumber;
-        const state = isCurrentPage ? fabricRef.current?.toJSON() : savedPageState?.json;
+        const state = isCurrentPage && fabricRef.current ? createPersistentCanvasJson(fabricRef.current) : savedPageState?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
