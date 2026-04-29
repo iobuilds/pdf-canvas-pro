@@ -45,7 +45,7 @@ type PageState = {
 };
 
 type PdfAreaClipboard = {
-  dataUrl: string;
+  sourceUrl: string;
   left: number;
   top: number;
   width: number;
@@ -70,6 +70,8 @@ type FabricJson = {
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const CANVAS_MAX_WIDTH = 980;
 const PDF_RENDER_TIMEOUT_MS = 7000;
+const AREA_CLIPBOARD_MAX_DIMENSION = 8192;
+const AREA_CLIPBOARD_MAX_PIXELS = 16_000_000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
 const SYSTEM_FONTS = [
   "Arial",
@@ -185,6 +187,33 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
     width: Math.max(1, Math.round(width)),
     height: Math.max(1, Math.round(height)),
   };
+}
+
+function getSafeAreaCaptureScale(width: number, height: number, pixelRatioX: number, pixelRatioY: number) {
+  const baseScale = Math.min(pixelRatioX, pixelRatioY);
+  const scaledWidth = width * baseScale;
+  const scaledHeight = height * baseScale;
+  const dimensionLimit = AREA_CLIPBOARD_MAX_DIMENSION / Math.max(scaledWidth, scaledHeight, 1);
+  const pixelLimit = Math.sqrt(AREA_CLIPBOARD_MAX_PIXELS / Math.max(scaledWidth * scaledHeight, 1));
+  return baseScale * Math.min(1, dimensionLimit, pixelLimit);
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Could not copy the selected area."));
+    }, "image/png");
+  });
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not read the selected area."));
+    image.src = src;
+  });
 }
 
 function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
