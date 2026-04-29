@@ -904,6 +904,11 @@ export function FunctionalPdfEditor() {
       if (!canvas) return;
 
       if (!activeObjects.length) {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
+          event.preventDefault();
+          void pastePdfArea();
+          return;
+        }
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
           event.preventDefault();
           event.stopPropagation();
