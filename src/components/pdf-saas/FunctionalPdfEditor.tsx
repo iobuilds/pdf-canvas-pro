@@ -50,6 +50,15 @@ type PdfAreaClipboard = {
   height: number;
 };
 
+type PdfMetadata = {
+  title: string;
+  author: string;
+  subject: string;
+  keywords: string;
+  creator: string;
+  producer: string;
+};
+
 type FabricJson = {
   version?: string;
   objects?: unknown[];
@@ -103,6 +112,14 @@ const SYSTEM_FONTS = [
   "SF Pro Text",
 ];
 const CROP_AREA_NAME = "export-crop-area";
+const EMPTY_PDF_METADATA: PdfMetadata = {
+  title: "",
+  author: "",
+  subject: "",
+  keywords: "",
+  creator: "",
+  producer: "",
+};
 
 type LocalFontEntry = {
   family: string;
@@ -228,6 +245,7 @@ export function FunctionalPdfEditor() {
   const [manualFontFamily, setManualFontFamily] = useState("");
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
+  const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -531,6 +549,15 @@ export function FunctionalPdfEditor() {
         setPageCount(doc.numPages);
         pageStatesRef.current = {};
         setPageStates({});
+        const pdfLibDoc = await PDFDocument.load(source.slice(0), { updateMetadata: false });
+        setPdfMetadata({
+          title: pdfLibDoc.getTitle() ?? "",
+          author: pdfLibDoc.getAuthor() ?? "",
+          subject: pdfLibDoc.getSubject() ?? "",
+          keywords: pdfLibDoc.getKeywords() ?? "",
+          creator: pdfLibDoc.getCreator() ?? "",
+          producer: pdfLibDoc.getProducer() ?? "",
+        });
         setMatches([]);
         historyRef.current = {};
         historyIndexRef.current = {};
@@ -966,6 +993,12 @@ export function FunctionalPdfEditor() {
     setIsLoading(true);
     try {
       const pdfLibDoc = await PDFDocument.load(pdfBytes.slice(0));
+      pdfLibDoc.setTitle(pdfMetadata.title);
+      pdfLibDoc.setAuthor(pdfMetadata.author);
+      pdfLibDoc.setSubject(pdfMetadata.subject);
+      pdfLibDoc.setKeywords(pdfMetadata.keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean));
+      pdfLibDoc.setCreator(pdfMetadata.creator);
+      pdfLibDoc.setProducer(pdfMetadata.producer);
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
         const savedPageState = pageStatesRef.current[pageNum];
@@ -1012,7 +1045,7 @@ export function FunctionalPdfEditor() {
     } finally {
       setIsLoading(false);
     }
-  }, [fileName, pageNumber, pdfBytes, pdfDoc, savePageState]);
+  }, [fileName, pageNumber, pdfBytes, pdfDoc, pdfMetadata, savePageState]);
 
   const downloadSelectedAreaPng = useCallback(() => {
     const pdfCanvas = pdfCanvasRef.current;
@@ -1124,6 +1157,15 @@ export function FunctionalPdfEditor() {
     },
     [availableFonts, pushHistory],
   );
+
+  const updatePdfMetadata = useCallback((field: keyof PdfMetadata, value: string) => {
+    setPdfMetadata((metadata) => ({ ...metadata, [field]: value }));
+  }, []);
+
+  const clearPdfMetadata = useCallback(() => {
+    setPdfMetadata(EMPTY_PDF_METADATA);
+    toast.success("PDF metadata cleared");
+  }, []);
 
   const toggleSelectedTextStyle = useCallback(
     (style: "bold" | "underline") => {
@@ -1658,6 +1700,27 @@ export function FunctionalPdfEditor() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  PDF metadata
+                </span>
+                <button className="text-xs font-semibold text-primary" type="button" onClick={clearPdfMetadata}>
+                  Clear all
+                </button>
+              </div>
+              {Object.entries(pdfMetadata).map(([field, value]) => (
+                <label key={field} className="block space-y-1 text-xs font-medium capitalize text-muted-foreground">
+                  {field}
+                  <input
+                    className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    value={value}
+                    disabled={!pdfDoc}
+                    onChange={(event) => updatePdfMetadata(field as keyof PdfMetadata, event.target.value)}
+                  />
+                </label>
+              ))}
             </div>
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
