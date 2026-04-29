@@ -549,6 +549,15 @@ export function FunctionalPdfEditor() {
         setPageCount(doc.numPages);
         pageStatesRef.current = {};
         setPageStates({});
+        const pdfLibDoc = await PDFDocument.load(source.slice(0), { updateMetadata: false });
+        setPdfMetadata({
+          title: pdfLibDoc.getTitle() ?? "",
+          author: pdfLibDoc.getAuthor() ?? "",
+          subject: pdfLibDoc.getSubject() ?? "",
+          keywords: pdfLibDoc.getKeywords() ?? "",
+          creator: pdfLibDoc.getCreator() ?? "",
+          producer: pdfLibDoc.getProducer() ?? "",
+        });
         setMatches([]);
         historyRef.current = {};
         historyIndexRef.current = {};
