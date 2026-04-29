@@ -73,6 +73,9 @@ const PDF_RENDER_TIMEOUT_MS = 7000;
 const AREA_CLIPBOARD_MAX_DIMENSION = 8192;
 const AREA_CLIPBOARD_MAX_PIXELS = 16_000_000;
 const MAIN_RECT_COLORS = ["#ffffff", "#000000", "#2563eb", "#dc2626", "#16a34a", "#facc15"];
+const AREA_SELECTION_FILL = "rgba(17, 24, 39, 0.03)";
+const AREA_SELECTION_STROKE = "rgba(17, 24, 39, 0.82)";
+const AREA_SELECTION_HANDLE = "rgba(17, 24, 39, 0.68)";
 const SYSTEM_FONTS = [
   "Arial",
   "Arial Black",
@@ -160,6 +163,19 @@ function readFileAsDataUrl(file: File) {
 function asFabricJson(json: unknown): FabricJson {
   if (json && typeof json === "object") return json as FabricJson;
   return { version: "6.0.0", objects: [] };
+}
+
+function createPersistentCanvasJson(canvas: fabric.StaticCanvas | FabricCanvas) {
+  const json = asFabricJson(canvas.toJSON(["name"]));
+  return {
+    ...json,
+    objects: Array.isArray(json.objects)
+      ? json.objects.filter(
+          (object) =>
+            !(object && typeof object === "object" && (object as { name?: string }).name === CROP_AREA_NAME),
+        )
+      : json.objects,
+  };
 }
 
 function renderWithTimeout(task: RenderTask) {
