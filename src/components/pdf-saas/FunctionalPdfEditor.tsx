@@ -166,12 +166,14 @@ function asFabricJson(json: unknown): FabricJson {
 }
 
 function createPersistentCanvasJson(canvas: fabric.StaticCanvas | FabricCanvas) {
-  const activeObject = "getActiveObject" in canvas ? canvas.getActiveObject() : null;
-  const cropAreas = canvas.getObjects().filter((object) => object.get("name") === CROP_AREA_NAME);
-  cropAreas.forEach((object) => canvas.remove(object));
-  const json = canvas.toJSON();
-  cropAreas.forEach((object) => canvas.add(object));
-  if (activeObject && "setActiveObject" in canvas) canvas.setActiveObject(activeObject);
+  // Serialize without mutating the live canvas (mutating fires object:added/removed
+  // events that interrupt in-progress transforms like resizing the crop area).
+  const json = canvas.toJSON() as FabricJson;
+  if (json && Array.isArray(json.objects)) {
+    json.objects = (json.objects as Array<Record<string, unknown>>).filter(
+      (object) => object?.name !== CROP_AREA_NAME,
+    );
+  }
   return json;
 }
 
