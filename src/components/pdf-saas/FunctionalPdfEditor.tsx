@@ -24,6 +24,8 @@ import {
   Underline,
   Undo2,
   Upload,
+  Save,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -50,6 +52,15 @@ type PdfAreaClipboard = {
   top: number;
   width: number;
   height: number;
+};
+
+type SavedPdfArea = {
+  id: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+  createdAt: number;
+  label: string;
 };
 
 type PdfMetadata = {
@@ -297,6 +308,26 @@ export function FunctionalPdfEditor() {
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
+  const [savedAreas, setSavedAreas] = useState<SavedPdfArea[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem("pdf-editor:saved-areas");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as SavedPdfArea[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("pdf-editor:saved-areas", JSON.stringify(savedAreas));
+    } catch {
+      // quota exceeded — silently ignore
+    }
+  }, [savedAreas]);
 
   const isUploading = isLoading && uploadProgress > 0 && uploadProgress < 100;
 
@@ -919,6 +950,98 @@ export function FunctionalPdfEditor() {
       toast.error(error instanceof Error ? error.message : "Could not paste the selected area.");
     }
   }, [requireCanvas]);
+
+  const saveCurrentAreaToLibrary = useCallback(async () => {
+    try {
+      const pdfCanvas = pdfCanvasRef.current;
+      const canvas = fabricRef.current;
+      if (!pdfCanvas || !canvas) return;
+      const active =
+        canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
+          ? canvas.getActiveObject()
+          : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+      if (!active) {
+        toast.error("Select an area first.");
+        return;
+      }
+      const rect = getCropExportRect(active, canvas);
+      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+      const areaCanvas = document.createElement("canvas");
+      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+      const context = areaCanvas.getContext("2d");
+      if (!context) return;
+      context.drawImage(
+        pdfCanvas,
+        rect.left * pixelRatioX,
+        rect.top * pixelRatioY,
+        rect.width * pixelRatioX,
+        rect.height * pixelRatioY,
+        0,
+        0,
+        areaCanvas.width,
+        areaCanvas.height,
+      );
+      const dataUrl = areaCanvas.toDataURL("image/png");
+      const entry: SavedPdfArea = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        dataUrl,
+        width: rect.width,
+        height: rect.height,
+        createdAt: Date.now(),
+        label: `${fileName.replace(/\.pdf$/i, "")} · p${pageNumber}`,
+      };
+      setSavedAreas((prev) => [entry, ...prev].slice(0, 30));
+      toast.success("Area saved to your library.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the selected area.");
+    }
+  }, [fileName, pageNumber]);
+
+  const pasteSavedArea = useCallback(
+    async (area: SavedPdfArea) => {
+      try {
+        const canvas = requireCanvas();
+        if (!canvas) return;
+        const imageElement = await loadImage(area.dataUrl);
+        const image = new fabric.FabricImage(imageElement);
+        const targetWidth = Math.min(area.width, canvas.getWidth());
+        const targetHeight = Math.min(area.height, canvas.getHeight());
+        image.set({
+          left: Math.max(0, (canvas.getWidth() - targetWidth) / 2),
+          top: Math.max(0, (canvas.getHeight() - targetHeight) / 2),
+          scaleX: targetWidth / (image.width || targetWidth),
+          scaleY: targetHeight / (image.height || targetHeight),
+          lockUniScaling: true,
+          cornerStyle: "circle",
+          borderColor: "#2563eb",
+          cornerColor: "#2563eb",
+        });
+        image.setCoords();
+        canvas.add(image);
+        canvas.setActiveObject(image);
+        canvas.requestRenderAll();
+        setSelectedObject(image);
+        setTool("select");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not paste the saved area.");
+      }
+    },
+    [requireCanvas],
+  );
+
+  const removeSavedArea = useCallback((id: string) => {
+    setSavedAreas((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const clearAllSavedAreas = useCallback(() => {
+    if (savedAreas.length === 0) return;
+    if (!window.confirm("Clear all saved areas? This cannot be undone.")) return;
+    setSavedAreas([]);
+    toast.success("Saved areas cleared.");
+  }, [savedAreas.length]);
 
   const addImageFromFile = useCallback(
     async (file: File) => {
@@ -1626,6 +1749,66 @@ export function FunctionalPdfEditor() {
                 <Download className="size-4" />
                 Download selected area
               </button>
+              <button
+                className={iconButton + " w-full justify-center"}
+                disabled={!selectedObject || selectedObject.get("name") !== CROP_AREA_NAME}
+                onClick={() => void saveCurrentAreaToLibrary()}
+              >
+                <Save className="size-4" />
+                Save area to library
+              </button>
+            </section>
+
+            <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Saved areas ({savedAreas.length})
+                </span>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground hover:text-destructive disabled:opacity-40"
+                  disabled={savedAreas.length === 0}
+                  onClick={clearAllSavedAreas}
+                >
+                  Clear all
+                </button>
+              </div>
+              {savedAreas.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Select an area and click <span className="font-medium">Save area to library</span> to keep it in this browser.
+                </p>
+              ) : (
+                <ul className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                  {savedAreas.map((area) => (
+                    <li key={area.id} className="group relative rounded-md border border-border bg-panel p-1">
+                      <button
+                        type="button"
+                        className="block w-full overflow-hidden rounded"
+                        onClick={() => void pasteSavedArea(area)}
+                        disabled={!isEditorReady}
+                        title={`${area.label} — click to paste`}
+                      >
+                        <img
+                          src={area.dataUrl}
+                          alt={area.label}
+                          className="h-20 w-full bg-white object-contain"
+                        />
+                        <span className="mt-1 block truncate px-1 text-[10px] text-muted-foreground">
+                          {area.label}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSavedArea(area.id)}
+                        className="absolute right-1 top-1 rounded-full bg-background/90 p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                        aria-label="Remove saved area"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
 
             <section className="space-y-4 rounded-xl border border-border bg-surface p-3">
