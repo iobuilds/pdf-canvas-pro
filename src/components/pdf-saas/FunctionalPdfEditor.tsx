@@ -951,6 +951,98 @@ export function FunctionalPdfEditor() {
     }
   }, [requireCanvas]);
 
+  const saveCurrentAreaToLibrary = useCallback(async () => {
+    try {
+      const pdfCanvas = pdfCanvasRef.current;
+      const canvas = fabricRef.current;
+      if (!pdfCanvas || !canvas) return;
+      const active =
+        canvas.getActiveObject()?.get("name") === CROP_AREA_NAME
+          ? canvas.getActiveObject()
+          : canvas.getObjects().find((object) => object.get("name") === CROP_AREA_NAME);
+      if (!active) {
+        toast.error("Select an area first.");
+        return;
+      }
+      const rect = getCropExportRect(active, canvas);
+      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+      const areaCanvas = document.createElement("canvas");
+      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+      const context = areaCanvas.getContext("2d");
+      if (!context) return;
+      context.drawImage(
+        pdfCanvas,
+        rect.left * pixelRatioX,
+        rect.top * pixelRatioY,
+        rect.width * pixelRatioX,
+        rect.height * pixelRatioY,
+        0,
+        0,
+        areaCanvas.width,
+        areaCanvas.height,
+      );
+      const dataUrl = areaCanvas.toDataURL("image/png");
+      const entry: SavedPdfArea = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        dataUrl,
+        width: rect.width,
+        height: rect.height,
+        createdAt: Date.now(),
+        label: `${fileName.replace(/\.pdf$/i, "")} · p${pageNumber}`,
+      };
+      setSavedAreas((prev) => [entry, ...prev].slice(0, 30));
+      toast.success("Area saved to your library.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the selected area.");
+    }
+  }, [fileName, pageNumber]);
+
+  const pasteSavedArea = useCallback(
+    async (area: SavedPdfArea) => {
+      try {
+        const canvas = requireCanvas();
+        if (!canvas) return;
+        const imageElement = await loadImage(area.dataUrl);
+        const image = new fabric.FabricImage(imageElement);
+        const targetWidth = Math.min(area.width, canvas.getWidth());
+        const targetHeight = Math.min(area.height, canvas.getHeight());
+        image.set({
+          left: Math.max(0, (canvas.getWidth() - targetWidth) / 2),
+          top: Math.max(0, (canvas.getHeight() - targetHeight) / 2),
+          scaleX: targetWidth / (image.width || targetWidth),
+          scaleY: targetHeight / (image.height || targetHeight),
+          lockUniScaling: true,
+          cornerStyle: "circle",
+          borderColor: "#2563eb",
+          cornerColor: "#2563eb",
+        });
+        image.setCoords();
+        canvas.add(image);
+        canvas.setActiveObject(image);
+        canvas.requestRenderAll();
+        setSelectedObject(image);
+        setTool("select");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not paste the saved area.");
+      }
+    },
+    [requireCanvas],
+  );
+
+  const removeSavedArea = useCallback((id: string) => {
+    setSavedAreas((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const clearAllSavedAreas = useCallback(() => {
+    if (savedAreas.length === 0) return;
+    if (!window.confirm("Clear all saved areas? This cannot be undone.")) return;
+    setSavedAreas([]);
+    toast.success("Saved areas cleared.");
+  }, [savedAreas.length]);
+
   const addImageFromFile = useCallback(
     async (file: File) => {
       const canvas = requireCanvas();
