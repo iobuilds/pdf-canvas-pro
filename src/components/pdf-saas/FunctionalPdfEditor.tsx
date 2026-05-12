@@ -24,6 +24,8 @@ import {
   Underline,
   Undo2,
   Upload,
+  Save,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -50,6 +52,15 @@ type PdfAreaClipboard = {
   top: number;
   width: number;
   height: number;
+};
+
+type SavedPdfArea = {
+  id: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+  createdAt: number;
+  label: string;
 };
 
 type PdfMetadata = {
@@ -297,6 +308,26 @@ export function FunctionalPdfEditor() {
   const [eraserSize, setEraserSize] = useState(18);
   const [hasPdfAreaClipboard, setHasPdfAreaClipboard] = useState(false);
   const [pdfMetadata, setPdfMetadata] = useState<PdfMetadata>(EMPTY_PDF_METADATA);
+  const [savedAreas, setSavedAreas] = useState<SavedPdfArea[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem("pdf-editor:saved-areas");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as SavedPdfArea[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("pdf-editor:saved-areas", JSON.stringify(savedAreas));
+    } catch {
+      // quota exceeded — silently ignore
+    }
+  }, [savedAreas]);
 
   const isUploading = isLoading && uploadProgress > 0 && uploadProgress < 100;
 
