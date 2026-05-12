@@ -170,8 +170,8 @@ function createPersistentCanvasJson(canvas: fabric.StaticCanvas | FabricCanvas) 
   // events that interrupt in-progress transforms like resizing the crop area).
   const json = canvas.toJSON() as FabricJson;
   if (json && Array.isArray(json.objects)) {
-    json.objects = json.objects.filter(
-      (object: { name?: string }) => object?.name !== CROP_AREA_NAME,
+    json.objects = (json.objects as Array<Record<string, unknown>>).filter(
+      (object) => object?.name !== CROP_AREA_NAME,
     );
   }
   return json;
