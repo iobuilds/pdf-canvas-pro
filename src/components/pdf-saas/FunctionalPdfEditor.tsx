@@ -1027,13 +1027,12 @@ export function FunctionalPdfEditor() {
         if (!canvas) return;
         const imageElement = await loadImage(area.dataUrl);
         const image = new fabric.FabricImage(imageElement);
-        const targetWidth = Math.min(area.width, canvas.getWidth());
-        const targetHeight = Math.min(area.height, canvas.getHeight());
+        const targetSize = getPasteSize(area.width, area.height, canvas);
         image.set({
-          left: Math.max(0, (canvas.getWidth() - targetWidth) / 2),
-          top: Math.max(0, (canvas.getHeight() - targetHeight) / 2),
-          scaleX: targetWidth / (image.width || targetWidth),
-          scaleY: targetHeight / (image.height || targetHeight),
+          left: Math.max(0, (canvas.getWidth() - targetSize.width) / 2),
+          top: Math.max(0, (canvas.getHeight() - targetSize.height) / 2),
+          scaleX: targetSize.width / (image.width || targetSize.width),
+          scaleY: targetSize.height / (image.height || targetSize.height),
           lockUniScaling: true,
           cornerStyle: "circle",
           borderColor: "#2563eb",
