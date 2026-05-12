@@ -936,25 +936,7 @@ export function FunctionalPdfEditor() {
           return;
         }
         const rect = getCropExportRect(active, canvas);
-        const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-        const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-        const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
-        const areaCanvas = document.createElement("canvas");
-        areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
-        areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
-        const context = areaCanvas.getContext("2d");
-        if (!context) return;
-        context.drawImage(
-          pdfCanvas,
-          rect.left * pixelRatioX,
-          rect.top * pixelRatioY,
-          rect.width * pixelRatioX,
-          rect.height * pixelRatioY,
-          0,
-          0,
-          areaCanvas.width,
-          areaCanvas.height,
-        );
+        const areaCanvas = capturePdfAreaCanvas(pdfCanvas, canvas, rect);
         const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
         pdfAreaObjectUrlsRef.current.push(sourceUrl);
         pdfAreaClipboardRef.current = {
@@ -985,13 +967,12 @@ export function FunctionalPdfEditor() {
       if (!canvas || !clipboard) return;
       const imageElement = await loadImage(clipboard.sourceUrl);
       const image = new fabric.FabricImage(imageElement);
+      const pasteSize = getPasteSize(clipboard.width, clipboard.height, canvas);
       image.set({
-        left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
-        top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
-        scaleX: clipboard.width / (image.width || clipboard.width),
-        scaleY: clipboard.height / (image.height || clipboard.height),
-        lockScalingX: true,
-        lockScalingY: true,
+        left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - pasteSize.width)),
+        top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - pasteSize.height)),
+        scaleX: pasteSize.width / (image.width || pasteSize.width),
+        scaleY: pasteSize.height / (image.height || pasteSize.height),
         lockUniScaling: true,
         cornerStyle: "circle",
         borderColor: "#2563eb",
@@ -1022,25 +1003,7 @@ export function FunctionalPdfEditor() {
         return;
       }
       const rect = getCropExportRect(active, canvas);
-      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
-      const areaCanvas = document.createElement("canvas");
-      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
-      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
-      const context = areaCanvas.getContext("2d");
-      if (!context) return;
-      context.drawImage(
-        pdfCanvas,
-        rect.left * pixelRatioX,
-        rect.top * pixelRatioY,
-        rect.width * pixelRatioX,
-        rect.height * pixelRatioY,
-        0,
-        0,
-        areaCanvas.width,
-        areaCanvas.height,
-      );
+      const areaCanvas = capturePdfAreaCanvas(pdfCanvas, canvas, rect);
       const dataUrl = areaCanvas.toDataURL("image/png");
       const entry: SavedPdfArea = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
