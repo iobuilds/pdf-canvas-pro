@@ -242,6 +242,63 @@ function loadImage(src: string) {
   });
 }
 
+function getPasteSize(sourceWidth: number, sourceHeight: number, canvas: FabricCanvas) {
+  const fitScale = Math.min(
+    1,
+    canvas.getWidth() / Math.max(sourceWidth, 1),
+    canvas.getHeight() / Math.max(sourceHeight, 1),
+  );
+  return {
+    width: Math.max(1, sourceWidth * fitScale),
+    height: Math.max(1, sourceHeight * fitScale),
+  };
+}
+
+function capturePdfAreaCanvas(pdfCanvas: HTMLCanvasElement, canvas: FabricCanvas, rect: ReturnType<typeof getCropExportRect>) {
+  const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+  const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+  const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+  const areaCanvas = document.createElement("canvas");
+  areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+  areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+  const context = areaCanvas.getContext("2d");
+  if (!context) throw new Error("Could not copy the selected area.");
+
+  context.drawImage(
+    pdfCanvas,
+    rect.left * pixelRatioX,
+    rect.top * pixelRatioY,
+    rect.width * pixelRatioX,
+    rect.height * pixelRatioY,
+    0,
+    0,
+    areaCanvas.width,
+    areaCanvas.height,
+  );
+
+  const hiddenCropAreas = canvas
+    .getObjects()
+    .filter((object) => object.get("name") === CROP_AREA_NAME && object.visible !== false);
+  hiddenCropAreas.forEach((object) => object.set("visible", false));
+  canvas.renderAll();
+  const overlayCanvas = canvas.lowerCanvasEl;
+  context.drawImage(
+    overlayCanvas,
+    rect.left * (overlayCanvas.width / canvas.getWidth()),
+    rect.top * (overlayCanvas.height / canvas.getHeight()),
+    rect.width * (overlayCanvas.width / canvas.getWidth()),
+    rect.height * (overlayCanvas.height / canvas.getHeight()),
+    0,
+    0,
+    areaCanvas.width,
+    areaCanvas.height,
+  );
+  hiddenCropAreas.forEach((object) => object.set("visible", true));
+  canvas.renderAll();
+
+  return areaCanvas;
+}
+
 function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
   const toWidth = canvas.getWidth();
   const toHeight = canvas.getHeight();
