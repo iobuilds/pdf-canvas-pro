@@ -215,7 +215,12 @@ function getCropExportRect(cropArea: fabric.FabricObject, canvas: FabricCanvas) 
   };
 }
 
-function getSafeAreaCaptureScale(width: number, height: number, pixelRatioX: number, pixelRatioY: number) {
+function getSafeAreaCaptureScale(
+  width: number,
+  height: number,
+  pixelRatioX: number,
+  pixelRatioY: number,
+) {
   const baseScale = Math.min(pixelRatioX, pixelRatioY);
   const scaledWidth = width * baseScale;
   const scaledHeight = height * baseScale;
@@ -242,7 +247,72 @@ function loadImage(src: string) {
   });
 }
 
-function scaleCanvasObjects(canvas: fabric.StaticCanvas | FabricCanvas, fromWidth: number, fromHeight: number) {
+function getPasteSize(sourceWidth: number, sourceHeight: number, canvas: FabricCanvas) {
+  const fitScale = Math.min(
+    1,
+    canvas.getWidth() / Math.max(sourceWidth, 1),
+    canvas.getHeight() / Math.max(sourceHeight, 1),
+  );
+  return {
+    width: Math.max(1, sourceWidth * fitScale),
+    height: Math.max(1, sourceHeight * fitScale),
+  };
+}
+
+function capturePdfAreaCanvas(
+  pdfCanvas: HTMLCanvasElement,
+  canvas: FabricCanvas,
+  rect: ReturnType<typeof getCropExportRect>,
+) {
+  const pixelRatioX = pdfCanvas.width / canvas.getWidth();
+  const pixelRatioY = pdfCanvas.height / canvas.getHeight();
+  const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
+  const areaCanvas = document.createElement("canvas");
+  areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
+  areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
+  const context = areaCanvas.getContext("2d");
+  if (!context) throw new Error("Could not copy the selected area.");
+
+  context.drawImage(
+    pdfCanvas,
+    rect.left * pixelRatioX,
+    rect.top * pixelRatioY,
+    rect.width * pixelRatioX,
+    rect.height * pixelRatioY,
+    0,
+    0,
+    areaCanvas.width,
+    areaCanvas.height,
+  );
+
+  const hiddenCropAreas = canvas
+    .getObjects()
+    .filter((object) => object.get("name") === CROP_AREA_NAME && object.visible !== false);
+  hiddenCropAreas.forEach((object) => object.set("visible", false));
+  canvas.renderAll();
+  const overlayCanvas = canvas.lowerCanvasEl;
+  context.drawImage(
+    overlayCanvas,
+    rect.left * (overlayCanvas.width / canvas.getWidth()),
+    rect.top * (overlayCanvas.height / canvas.getHeight()),
+    rect.width * (overlayCanvas.width / canvas.getWidth()),
+    rect.height * (overlayCanvas.height / canvas.getHeight()),
+    0,
+    0,
+    areaCanvas.width,
+    areaCanvas.height,
+  );
+  hiddenCropAreas.forEach((object) => object.set("visible", true));
+  canvas.renderAll();
+
+  return areaCanvas;
+}
+
+function scaleCanvasObjects(
+  canvas: fabric.StaticCanvas | FabricCanvas,
+  fromWidth: number,
+  fromHeight: number,
+) {
   const toWidth = canvas.getWidth();
   const toHeight = canvas.getHeight();
   if (!fromWidth || !fromHeight || (fromWidth === toWidth && fromHeight === toHeight)) return;
@@ -583,12 +653,12 @@ export function FunctionalPdfEditor() {
       if (savedJson) {
         skipHistoryRef.current = true;
         await nextFabric.loadFromJSON(savedJson);
-          const savedState = pageStatesRef.current[pageNumber];
-          scaleCanvasObjects(
-            nextFabric,
-            savedState?.canvasWidth ?? viewport.width,
-            savedState?.canvasHeight ?? viewport.height,
-          );
+        const savedState = pageStatesRef.current[pageNumber];
+        scaleCanvasObjects(
+          nextFabric,
+          savedState?.canvasWidth ?? viewport.width,
+          savedState?.canvasHeight ?? viewport.height,
+        );
         nextFabric.requestRenderAll();
         skipHistoryRef.current = false;
       } else if (!historyRef.current[pageNumber]) {
@@ -879,25 +949,7 @@ export function FunctionalPdfEditor() {
           return;
         }
         const rect = getCropExportRect(active, canvas);
-        const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-        const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-        const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
-        const areaCanvas = document.createElement("canvas");
-        areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
-        areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
-        const context = areaCanvas.getContext("2d");
-        if (!context) return;
-        context.drawImage(
-          pdfCanvas,
-          rect.left * pixelRatioX,
-          rect.top * pixelRatioY,
-          rect.width * pixelRatioX,
-          rect.height * pixelRatioY,
-          0,
-          0,
-          areaCanvas.width,
-          areaCanvas.height,
-        );
+        const areaCanvas = capturePdfAreaCanvas(pdfCanvas, canvas, rect);
         const sourceUrl = URL.createObjectURL(await canvasToPngBlob(areaCanvas));
         pdfAreaObjectUrlsRef.current.push(sourceUrl);
         pdfAreaClipboardRef.current = {
@@ -913,7 +965,9 @@ export function FunctionalPdfEditor() {
           canvas.requestRenderAll();
           pushHistory();
         }
-        toast.success(cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.");
+        toast.success(
+          cut ? "Area cut. Paste it on any page." : "Area copied. Paste it on any page.",
+        );
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not copy the selected area.");
       }
@@ -928,13 +982,18 @@ export function FunctionalPdfEditor() {
       if (!canvas || !clipboard) return;
       const imageElement = await loadImage(clipboard.sourceUrl);
       const image = new fabric.FabricImage(imageElement);
+      const pasteSize = getPasteSize(clipboard.width, clipboard.height, canvas);
       image.set({
-        left: Math.min(Math.max(0, clipboard.left), Math.max(0, canvas.getWidth() - clipboard.width)),
-        top: Math.min(Math.max(0, clipboard.top), Math.max(0, canvas.getHeight() - clipboard.height)),
-        scaleX: clipboard.width / (image.width || clipboard.width),
-        scaleY: clipboard.height / (image.height || clipboard.height),
-        lockScalingX: true,
-        lockScalingY: true,
+        left: Math.min(
+          Math.max(0, clipboard.left),
+          Math.max(0, canvas.getWidth() - pasteSize.width),
+        ),
+        top: Math.min(
+          Math.max(0, clipboard.top),
+          Math.max(0, canvas.getHeight() - pasteSize.height),
+        ),
+        scaleX: pasteSize.width / (image.width || pasteSize.width),
+        scaleY: pasteSize.height / (image.height || pasteSize.height),
         lockUniScaling: true,
         cornerStyle: "circle",
         borderColor: "#2563eb",
@@ -965,25 +1024,7 @@ export function FunctionalPdfEditor() {
         return;
       }
       const rect = getCropExportRect(active, canvas);
-      const pixelRatioX = pdfCanvas.width / canvas.getWidth();
-      const pixelRatioY = pdfCanvas.height / canvas.getHeight();
-      const captureScale = getSafeAreaCaptureScale(rect.width, rect.height, pixelRatioX, pixelRatioY);
-      const areaCanvas = document.createElement("canvas");
-      areaCanvas.width = Math.max(1, Math.round(rect.width * captureScale));
-      areaCanvas.height = Math.max(1, Math.round(rect.height * captureScale));
-      const context = areaCanvas.getContext("2d");
-      if (!context) return;
-      context.drawImage(
-        pdfCanvas,
-        rect.left * pixelRatioX,
-        rect.top * pixelRatioY,
-        rect.width * pixelRatioX,
-        rect.height * pixelRatioY,
-        0,
-        0,
-        areaCanvas.width,
-        areaCanvas.height,
-      );
+      const areaCanvas = capturePdfAreaCanvas(pdfCanvas, canvas, rect);
       const dataUrl = areaCanvas.toDataURL("image/png");
       const entry: SavedPdfArea = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1007,13 +1048,12 @@ export function FunctionalPdfEditor() {
         if (!canvas) return;
         const imageElement = await loadImage(area.dataUrl);
         const image = new fabric.FabricImage(imageElement);
-        const targetWidth = Math.min(area.width, canvas.getWidth());
-        const targetHeight = Math.min(area.height, canvas.getHeight());
+        const targetSize = getPasteSize(area.width, area.height, canvas);
         image.set({
-          left: Math.max(0, (canvas.getWidth() - targetWidth) / 2),
-          top: Math.max(0, (canvas.getHeight() - targetHeight) / 2),
-          scaleX: targetWidth / (image.width || targetWidth),
-          scaleY: targetHeight / (image.height || targetHeight),
+          left: Math.max(0, (canvas.getWidth() - targetSize.width) / 2),
+          top: Math.max(0, (canvas.getHeight() - targetSize.height) / 2),
+          scaleX: targetSize.width / (image.width || targetSize.width),
+          scaleY: targetSize.height / (image.height || targetSize.height),
           lockUniScaling: true,
           cornerStyle: "circle",
           borderColor: "#2563eb",
@@ -1208,14 +1248,22 @@ export function FunctionalPdfEditor() {
       pdfLibDoc.setTitle(pdfMetadata.title);
       pdfLibDoc.setAuthor(pdfMetadata.author);
       pdfLibDoc.setSubject(pdfMetadata.subject);
-      pdfLibDoc.setKeywords(pdfMetadata.keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean));
+      pdfLibDoc.setKeywords(
+        pdfMetadata.keywords
+          .split(",")
+          .map((keyword) => keyword.trim())
+          .filter(Boolean),
+      );
       pdfLibDoc.setCreator(pdfMetadata.creator);
       pdfLibDoc.setProducer(pdfMetadata.producer);
       for (let index = 0; index < pdfLibDoc.getPageCount(); index += 1) {
         const pageNum = index + 1;
         const savedPageState = pageStatesRef.current[pageNum];
         const isCurrentPage = pageNum === pageNumber;
-        const state = isCurrentPage && fabricRef.current ? createPersistentCanvasJson(fabricRef.current) : savedPageState?.json;
+        const state =
+          isCurrentPage && fabricRef.current
+            ? createPersistentCanvasJson(fabricRef.current)
+            : savedPageState?.json;
         if (!state) continue;
         const page = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: 1 });
@@ -1528,7 +1576,9 @@ export function FunctionalPdfEditor() {
                   min="4"
                   max="80"
                   value={eraserSize}
-                  onChange={(event) => setEraserSize(Math.min(80, Math.max(4, Number(event.target.value) || 4)))}
+                  onChange={(event) =>
+                    setEraserSize(Math.min(80, Math.max(4, Number(event.target.value) || 4)))
+                  }
                 />
               </label>
             )}
@@ -1622,7 +1672,10 @@ export function FunctionalPdfEditor() {
           </div>
         </aside>
 
-        <div ref={workspaceRef} className="relative order-1 flex min-h-[60vh] min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6 lg:order-none lg:min-h-0">
+        <div
+          ref={workspaceRef}
+          className="relative order-1 flex min-h-[60vh] min-w-0 flex-col overflow-auto bg-editor p-3 md:p-6 lg:order-none lg:min-h-0"
+        >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 text-sm font-semibold shadow-soft">
               Page
@@ -1671,7 +1724,9 @@ export function FunctionalPdfEditor() {
                   <div className="absolute inset-0 grid place-items-center p-6 text-center">
                     <div className="space-y-2">
                       <p className="text-lg font-bold text-foreground">PDF Editor v1.0</p>
-                      <p className="text-sm font-medium text-muted-foreground">Drop PDF here to start editing</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Drop PDF here to start editing
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1712,7 +1767,11 @@ export function FunctionalPdfEditor() {
                 </span>
                 <Crop className="size-4 text-muted-foreground" />
               </div>
-              <button className={iconButton + " w-full justify-center"} disabled={!isEditorReady} onClick={addCropArea}>
+              <button
+                className={iconButton + " w-full justify-center"}
+                disabled={!isEditorReady}
+                onClick={addCropArea}
+              >
                 <Crop className="size-4" />
                 Select area
               </button>
@@ -1745,7 +1804,11 @@ export function FunctionalPdfEditor() {
                   <span className="hidden sm:inline">Paste</span>
                 </button>
               </div>
-              <button className={primaryActionButton + " w-full justify-center"} disabled={!isEditorReady} onClick={downloadSelectedAreaPng}>
+              <button
+                className={primaryActionButton + " w-full justify-center"}
+                disabled={!isEditorReady}
+                onClick={downloadSelectedAreaPng}
+              >
                 <Download className="size-4" />
                 Download selected area
               </button>
@@ -1775,12 +1838,16 @@ export function FunctionalPdfEditor() {
               </div>
               {savedAreas.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Select an area and click <span className="font-medium">Save area to library</span> to keep it in this browser.
+                  Select an area and click <span className="font-medium">Save area to library</span>{" "}
+                  to keep it in this browser.
                 </p>
               ) : (
                 <ul className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
                   {savedAreas.map((area) => (
-                    <li key={area.id} className="group relative rounded-md border border-border bg-panel p-1">
+                    <li
+                      key={area.id}
+                      className="group relative rounded-md border border-border bg-panel p-1"
+                    >
                       <button
                         type="button"
                         className="block w-full overflow-hidden rounded"
@@ -1871,7 +1938,9 @@ export function FunctionalPdfEditor() {
               <button
                 className={iconButton + " w-full justify-center"}
                 type="button"
-                disabled={!selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1}
+                disabled={
+                  !selectedObject || selectedObject.get("name") === CROP_AREA_NAME || pageCount <= 1
+                }
                 onClick={applySelectedObjectToAllPages}
               >
                 Apply selected element to all pages
@@ -1917,14 +1986,22 @@ export function FunctionalPdfEditor() {
                 <label className="block space-y-1 text-xs font-medium text-muted-foreground">
                   <span className="flex items-center justify-between gap-2">
                     System font
-                    <button className="text-xs font-semibold text-primary" type="button" onClick={loadSystemFonts}>
+                    <button
+                      className="text-xs font-semibold text-primary"
+                      type="button"
+                      onClick={loadSystemFonts}
+                    >
                       Load all
                     </button>
                   </span>
                   <select
                     className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     disabled={!selectedText}
-                    value={selectedText?.fontFamily ? String(selectedText.fontFamily).split(",")[0] : "Arial"}
+                    value={
+                      selectedText?.fontFamily
+                        ? String(selectedText.fontFamily).split(",")[0]
+                        : "Arial"
+                    }
                     onChange={(event) => setSelectedFontFamily(event.target.value)}
                   >
                     {availableFonts.map((font) => (
@@ -1942,7 +2019,8 @@ export function FunctionalPdfEditor() {
                     value={manualFontFamily}
                     onChange={(event) => setManualFontFamily(event.target.value)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter" && manualFontFamily.trim()) setSelectedFontFamily(manualFontFamily.trim());
+                      if (event.key === "Enter" && manualFontFamily.trim())
+                        setSelectedFontFamily(manualFontFamily.trim());
                     }}
                   />
                   <button
@@ -1986,7 +2064,12 @@ export function FunctionalPdfEditor() {
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {[12, 20, 28, 48].map((size) => (
-                    <button key={size} className={iconButton + " h-9 px-2"} disabled={!selectedText} onClick={() => setSelectedFontSize(size)}>
+                    <button
+                      key={size}
+                      className={iconButton + " h-9 px-2"}
+                      disabled={!selectedText}
+                      onClick={() => setSelectedFontSize(size)}
+                    >
                       {size}
                     </button>
                   ))}
@@ -1999,17 +2082,27 @@ export function FunctionalPdfEditor() {
                 PDF metadata
               </summary>
               <div className="mt-3 space-y-3">
-                <button className={iconButton + " w-full justify-center"} type="button" onClick={clearPdfMetadata} disabled={!pdfDoc}>
+                <button
+                  className={iconButton + " w-full justify-center"}
+                  type="button"
+                  onClick={clearPdfMetadata}
+                  disabled={!pdfDoc}
+                >
                   Clear all metadata
                 </button>
                 {Object.entries(pdfMetadata).map(([field, value]) => (
-                  <label key={field} className="block space-y-1 text-xs font-medium capitalize text-muted-foreground">
+                  <label
+                    key={field}
+                    className="block space-y-1 text-xs font-medium capitalize text-muted-foreground"
+                  >
                     {field}
                     <input
                       className="h-9 w-full rounded-md border border-input bg-panel px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                       value={value}
                       disabled={!pdfDoc}
-                      onChange={(event) => updatePdfMetadata(field as keyof PdfMetadata, event.target.value)}
+                      onChange={(event) =>
+                        updatePdfMetadata(field as keyof PdfMetadata, event.target.value)
+                      }
                     />
                   </label>
                 ))}
@@ -2021,8 +2114,16 @@ export function FunctionalPdfEditor() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   PNG preview
                 </span>
-                <img className="max-h-40 w-full rounded-lg border border-border object-contain" src={pngPreviewUrl} alt="Downloaded selected area preview" />
-                <a className={iconButton + " w-full justify-center"} href={pngPreviewUrl} download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}>
+                <img
+                  className="max-h-40 w-full rounded-lg border border-border object-contain"
+                  src={pngPreviewUrl}
+                  alt="Downloaded selected area preview"
+                />
+                <a
+                  className={iconButton + " w-full justify-center"}
+                  href={pngPreviewUrl}
+                  download={fileName.replace(/\.pdf$/i, `-page-${pageNumber}-area.png`)}
+                >
                   Download again
                 </a>
               </section>
