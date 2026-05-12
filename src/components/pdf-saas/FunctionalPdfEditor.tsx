@@ -1749,6 +1749,66 @@ export function FunctionalPdfEditor() {
                 <Download className="size-4" />
                 Download selected area
               </button>
+              <button
+                className={iconButton + " w-full justify-center"}
+                disabled={!selectedObject || selectedObject.get("name") !== CROP_AREA_NAME}
+                onClick={() => void saveCurrentAreaToLibrary()}
+              >
+                <Save className="size-4" />
+                Save area to library
+              </button>
+            </section>
+
+            <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Saved areas ({savedAreas.length})
+                </span>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground hover:text-destructive disabled:opacity-40"
+                  disabled={savedAreas.length === 0}
+                  onClick={clearAllSavedAreas}
+                >
+                  Clear all
+                </button>
+              </div>
+              {savedAreas.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Select an area and click <span className="font-medium">Save area to library</span> to keep it in this browser.
+                </p>
+              ) : (
+                <ul className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                  {savedAreas.map((area) => (
+                    <li key={area.id} className="group relative rounded-md border border-border bg-panel p-1">
+                      <button
+                        type="button"
+                        className="block w-full overflow-hidden rounded"
+                        onClick={() => void pasteSavedArea(area)}
+                        disabled={!isEditorReady}
+                        title={`${area.label} — click to paste`}
+                      >
+                        <img
+                          src={area.dataUrl}
+                          alt={area.label}
+                          className="h-20 w-full bg-white object-contain"
+                        />
+                        <span className="mt-1 block truncate px-1 text-[10px] text-muted-foreground">
+                          {area.label}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSavedArea(area.id)}
+                        className="absolute right-1 top-1 rounded-full bg-background/90 p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                        aria-label="Remove saved area"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
 
             <section className="space-y-4 rounded-xl border border-border bg-surface p-3">
